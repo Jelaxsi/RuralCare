@@ -1,0 +1,22 @@
+[
+  {
+    "id": "afccc2e7-4d32-4df5-bdf6-dbefd7a69bd8",
+    "name": "Unknown",
+    "location": "Unknown",
+    "language": "English",
+    "transcript": "The person got heart attack",
+    "priority": "P1",
+    "reason": "Critical symptom keywords detected (including speech-variation matching) — immediate response required.",
+    "timestamp": "2026-05-06T09:57:08.924Z"
+  },
+  {
+    "id": "9521cd85-65a7-45d6-a514-139af5d2f9c9",
+    "name": "Ana",
+    "location": "Kandy",
+    "language": "English",
+    "transcript": "patient is good heart attack",
+    "priority": "P1",
+    "reason": "Critical symptom keywords detected (including speech-variation matching) — immediate response required.",
+    "timestamp": "2026-05-06T10:16:27.975Z"
+  }
+]

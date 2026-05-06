@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-navy: #0f172a;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply min-h-screen bg-navy text-slate-100 antialiased;
+  background-color: var(--bg-navy);
+  background-image:
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(124, 58, 237, 0.18), transparent),
+    radial-gradient(ellipse 60% 50% at 100% 50%, rgba(16, 185, 129, 0.06), transparent),
+    radial-gradient(ellipse 50% 40% at 0% 80%, rgba(239, 68, 68, 0.05), transparent);
+}
+
+@layer utilities {
+  .glass {
+    @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md;
+  }
+
+  .text-gradient-violet {
+    @apply bg-gradient-to-r from-violet-300 via-accent to-fuchsia-400 bg-clip-text text-transparent;
+  }
+
+  .btn-glow {
+    @apply transition-all duration-200 hover:scale-105 hover:shadow-glow-button active:scale-100;
+  }
+}
