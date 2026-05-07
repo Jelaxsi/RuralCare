@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type Priority = "P1" | "P2" | "P3";
+type Confidence = "high" | "medium" | "low";
 type LanguageCode = "english" | "sinhala" | "tamil";
 
 const LANG_OPTIONS = [
@@ -156,7 +157,7 @@ const translations: Record<
 const FIRST_AID_STEPS: Record<LanguageCode, Record<Priority, string[]>> = {
   english: {
     P1: [
-      "Call emergency services immediately (dial 1990 in Sri Lanka).",
+      "Call emergency services immediately: Ambulance 1990, Fire & Rescue 110, Police 119.",
       "Do NOT move the patient unless in immediate danger.",
       "If not breathing: start CPR — 30 chest compressions, 2 rescue breaths.",
       "If bleeding: apply firm pressure with a clean cloth.",
@@ -183,7 +184,7 @@ const FIRST_AID_STEPS: Record<LanguageCode, Record<Priority, string[]>> = {
   },
   sinhala: {
     P1: [
-      "හදිසි සේවා වහාම අමතන්න (1990).",
+      "හදිසි සේවා වහාම අමතන්න: ගිලන් රථ 1990, ගිනි නිවන 110, පොලිසිය 119.",
       "රෝගියා නොසෙල්වන්න.",
       "හුස්ම නොගන්නේ නම්: CPR ආරම්භ කරන්න.",
       "රුධිරය ගලනවා නම්: පිරිසිදු රෙදිකඩකින් ඔබන්න.",
@@ -208,7 +209,7 @@ const FIRST_AID_STEPS: Record<LanguageCode, Record<Priority, string[]>> = {
   },
   tamil: {
     P1: [
-      "உடனடியாக அவசர சேவைகளை அழைக்கவும் (1990).",
+      "உடனடியாக அவசர சேவைகளை அழைக்கவும்: ஆம்புலன்ஸ் 1990, தீயணைப்பு 110, போலீஸ் 119.",
       "நோயாளியை அசைக்காதீர்கள்.",
       "சுவாசிக்கவில்லை எனில்: CPR தொடங்குங்கள்.",
       "இரத்தப்போக்கு இருந்தால்: சுத்தமான துணியால் அழுத்துங்கள்.",
@@ -275,7 +276,7 @@ const FACILITY_LOOKUP: Record<string, FacilityInfo> = {
     name: "Nearest Regional Hospital",
     distance: "~2 km",
     hours: "Open 24/7",
-    phone: "1990",
+    phone: "011",
   },
 };
 
@@ -354,6 +355,10 @@ export default function TriagePage() {
 
   const [priority, setPriority] = useState<Priority | null>(null);
   const [reason, setReason] = useState<string | null>(null);
+  const [likelyCondition, setLikelyCondition] = useState<string | null>(null);
+  const [firstAidSpecific, setFirstAidSpecific] = useState<string | null>(null);
+  const [confidence, setConfidence] = useState<Confidence | null>(null);
+  const [callEmergency, setCallEmergency] = useState(false);
   const [showResult, setShowResult] = useState(false);
 
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
@@ -389,6 +394,10 @@ export default function TriagePage() {
     setFinalPieces([]);
     setPriority(null);
     setReason(null);
+    setLikelyCondition(null);
+    setFirstAidSpecific(null);
+    setConfidence(null);
+    setCallEmergency(false);
     setShowResult(false);
     setSaveState("idle");
     setLastError(null);
@@ -505,7 +514,15 @@ export default function TriagePage() {
         }),
       });
 
-      const data = (await res.json()) as { priority?: Priority; reason?: string; error?: string };
+      const data = (await res.json()) as {
+        priority?: Priority;
+        likely_condition?: string;
+        reason?: string;
+        first_aid_specific?: string;
+        call_emergency?: boolean;
+        confidence?: Confidence;
+        error?: string;
+      };
 
       if (!res.ok) {
         setLastError(data.error ?? "Scoring failed");
@@ -515,7 +532,11 @@ export default function TriagePage() {
       }
 
       setPriority(data.priority ?? "P3");
+      setLikelyCondition(data.likely_condition ?? "General symptom review");
       setReason(data.reason ?? "");
+      setFirstAidSpecific(data.first_aid_specific ?? "");
+      setCallEmergency(Boolean(data.call_emergency));
+      setConfidence(data.confidence ?? "low");
       setShowResult(true);
     } catch {
       setLastError("Network error while scoring");
@@ -575,6 +596,21 @@ export default function TriagePage() {
   const t = translations[language];
   const selectedFacility = facilityByLocation(patientLocation);
   const firstAidSteps = priority ? FIRST_AID_STEPS[language][priority] : [];
+  const confidenceTone =
+    confidence === "high"
+      ? {
+          label: "High Confidence",
+          classes: "border-emerald-400/35 bg-emerald-500/20 text-emerald-100",
+        }
+      : confidence === "medium"
+        ? {
+            label: "Medium Confidence",
+            classes: "border-amber-400/35 bg-amber-500/20 text-amber-100",
+          }
+        : {
+            label: "Low Confidence",
+            classes: "border-yellow-400/35 bg-yellow-500/20 text-yellow-100",
+          };
   const recommendedFacilityType =
     priority === "P1"
       ? "Nearest HOSPITAL (emergency capable)"
@@ -932,8 +968,31 @@ export default function TriagePage() {
             <div className="glass relative overflow-hidden p-8 md:p-10">
               <div className="pointer-events-none absolute -right-28 -top-28 h-64 w-64 rounded-full bg-accent/10 blur-3xl" />
               <PriorityBadge priority={priority} language={language} />
+              <div className="mt-6 rounded-2xl border border-white/15 bg-black/25 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent/20 text-accent">
+                      <MedicalCrossIcon />
+                    </span>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Likely Condition</div>
+                      <div className="text-base font-semibold text-white md:text-lg">
+                        {likelyCondition ?? "General symptom review"}
+                      </div>
+                    </div>
+                  </div>
+                  {confidence && (
+                    <span
+                      className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${confidenceTone.classes}`}
+                    >
+                      {confidenceTone.label}
+                    </span>
+                  )}
+                </div>
+              </div>
 
               <p className="mt-8 text-lg text-slate-200 md:text-xl">{reason}</p>
+              {priority !== "P3" && <EmergencyContactsCard />}
 
               <div
                 className={`mt-8 grid gap-4 md:grid-cols-2 ${mounted ? "animate-fade-in" : "opacity-0"}`}
@@ -957,7 +1016,7 @@ export default function TriagePage() {
                     <h3 className="text-base font-semibold text-white">{t.firstAidTitle}</h3>
                   </div>
                   <ol className="mt-4 space-y-2 text-sm text-slate-200">
-                    {firstAidSteps.map((step, idx) => (
+                    {[firstAidSpecific || firstAidSteps[0], ...firstAidSteps.slice(1)].filter(Boolean).map((step, idx) => (
                       <li key={step} className="flex items-start gap-2">
                         <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${priorityTone.dot}`} />
                         <span>
@@ -1203,6 +1262,61 @@ function SparkIcon() {
       aria-hidden
     >
       <path d="M13 10V3L4 14h7v7l9-11h-7z" opacity=".92" />
+    </svg>
+  );
+}
+
+function EmergencyContactsCard() {
+  const contacts = [
+    { label: "Ambulance (Suwa Seriya)", number: "1990", icon: "🚑", urgent: true },
+    { label: "Fire & Rescue", number: "110", icon: "🚒", urgent: false },
+    { label: "Police", number: "119", icon: "👮", urgent: false },
+  ];
+
+  return (
+    <div className="mt-6 rounded-2xl border border-rose-400/30 bg-black/25 p-5 backdrop-blur-md">
+      <h3 className="text-base font-semibold text-white">Emergency Contacts</h3>
+      <div className="mt-4 space-y-3">
+        {contacts.map((contact) => (
+          <div
+            key={contact.number}
+            className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/25 px-4 py-3"
+          >
+            <div className="text-sm text-slate-200">
+              <span className="mr-2">{contact.icon}</span>
+              {contact.label}
+            </div>
+            <a
+              href={`tel:${contact.number}`}
+              className={`rounded-lg px-4 py-2 text-lg font-extrabold tracking-wide text-white ${
+                contact.urgent
+                  ? "animate-pulse border border-rose-300/45 bg-rose-500/30 shadow-[0_0_24px_rgba(244,63,94,0.45)]"
+                  : "border border-white/20 bg-white/10"
+              }`}
+            >
+              {contact.number}
+            </a>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MedicalCrossIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+      <circle cx="12" cy="12" r="9" />
     </svg>
   );
 }
