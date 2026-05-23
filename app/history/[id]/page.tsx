@@ -3,18 +3,9 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-
-type Priority = "P1" | "P2" | "P3";
-type CaseRecord = {
-  id: string;
-  name: string;
-  location: string;
-  language: string;
-  transcript: string;
-  priority: Priority;
-  reason: string;
-  timestamp: string;
-};
+import { PriorityBadge } from "@/components/PriorityBadge";
+import { getTranslations } from "@/lib/i18n/translations";
+import type { CaseRecord } from "@/lib/types";
 
 function formatTimestamp(ts: string) {
   try {
@@ -29,6 +20,8 @@ function formatTimestamp(ts: string) {
     return ts;
   }
 }
+
+const t = getTranslations("english");
 
 export default function PatientHistoryPage() {
   const params = useParams<{ id: string }>();
@@ -64,69 +57,52 @@ export default function PatientHistoryPage() {
   }, [cases, selected]);
 
   return (
-    <div className="min-h-screen px-4 py-10 md:px-8">
+    <div className="min-h-screen bg-surface-light px-4 py-10 dark:bg-surface-dark md:px-8">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-6">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 hover:border-accent/40"
-          >
-            <span aria-hidden>←</span> Back to Dashboard
-          </Link>
-        </div>
+        <Link href="/dashboard" className="btn-secondary mb-6 inline-flex text-sm">
+          ← Back to Dashboard
+        </Link>
 
-        <div className="glass p-6 md:p-8">
-          <h1 className="text-2xl font-bold text-white md:text-3xl">
+        <div className="clinical-card">
+          <h1 className="text-2xl font-bold text-text-primary md:text-3xl">
             Patient History — {selected?.name ?? "Unknown"}
           </h1>
-          <p className="mt-2 text-sm text-slate-400">Timeline of all captured triage entries for this patient.</p>
-        </div>
+          <p className="mt-2 text-base text-text-muted">
+            {selected?.location ?? "—"} · {history.length} visit{history.length === 1 ? "" : "s"}
+          </p>
 
-        <div className="mt-8">
           {loading ? (
-            <div className="glass p-10 text-center text-slate-400">Loading history…</div>
+            <p className="mt-8 text-text-muted">Loading…</p>
           ) : error ? (
-            <div className="glass p-10 text-center text-p1-rose">{error}</div>
-          ) : !selected ? (
-            <div className="glass p-10 text-center text-slate-300">Case not found.</div>
+            <p className="mt-8 text-p1-rose">{error}</p>
           ) : history.length === 0 ? (
-            <div className="glass p-10 text-center text-slate-300">No history available.</div>
+            <p className="mt-8 text-text-muted">No history found.</p>
           ) : (
-            <div className="relative space-y-4 before:absolute before:bottom-0 before:left-4 before:top-0 before:w-px before:bg-white/10">
+            <ol className="mt-8 space-y-4">
               {history.map((entry) => (
-                <div key={entry.id} className="glass relative ml-8 p-5">
-                  <span className="absolute -left-[26px] top-6 h-3 w-3 rounded-full bg-accent" />
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-sm text-slate-400">{formatTimestamp(entry.timestamp)}</div>
-                    <PriorityBadge priority={entry.priority} />
+                <li
+                  key={entry.id}
+                  className={`rounded-xl border border-border p-5 ${
+                    entry.priority === "P1"
+                      ? "border-p1-rose/30 bg-p1-rose/5"
+                      : entry.priority === "P2"
+                        ? "border-p2-amber/30 bg-p2-amber/5"
+                        : "border-p3-emerald/30 bg-p3-emerald/5"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <PriorityBadge priority={entry.priority} t={t} size="sm" />
+                    <time className="text-sm text-text-muted">{formatTimestamp(entry.timestamp)}</time>
                   </div>
-                  <div className="mt-2 text-sm text-slate-300">{entry.location}</div>
-                  <p className="mt-4 rounded-xl border border-white/10 bg-black/25 p-4 text-slate-200">
-                    {entry.transcript}
-                  </p>
-                  <p className="mt-4 text-sm text-slate-300">{entry.reason}</p>
-                </div>
+                  <p className="mt-3 font-semibold text-text-primary">{entry.likely_condition}</p>
+                  <p className="mt-2 text-base text-text-secondary">{entry.transcript}</p>
+                  <p className="mt-2 text-sm text-text-muted">{entry.reason}</p>
+                </li>
               ))}
-            </div>
+            </ol>
           )}
         </div>
       </div>
     </div>
-  );
-}
-
-function PriorityBadge({ priority }: { priority: Priority }) {
-  const cls =
-    priority === "P1"
-      ? "bg-p1-rose/20 text-red-50 ring-red-400/35"
-      : priority === "P2"
-        ? "bg-p2-amber/20 text-amber-50 ring-p2-amber/35"
-        : "bg-p3-emerald/20 text-emerald-50 ring-p3-emerald/35";
-  const label =
-    priority === "P1" ? "P1 Critical" : priority === "P2" ? "P2 Urgent" : "P3 Non-Urgent";
-  return (
-    <span className={`inline-flex items-center rounded-full px-4 py-1.5 text-xs font-semibold ring-1 ${cls}`}>
-      {label}
-    </span>
   );
 }

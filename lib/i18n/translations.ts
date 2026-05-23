@@ -1,0 +1,448 @@
+import type { TranslationLanguage } from "./languages";
+
+export type TranslationKeys = {
+  title: string;
+  subtitle: string;
+  poweredBy: string;
+  patientDetails: string;
+  captureContext: string;
+  patientIdLabel: string;
+  patientNameLabel: string;
+  ageLabel: string;
+  genderLabel: string;
+  genderMale: string;
+  genderFemale: string;
+  genderOther: string;
+  genderPreferNot: string;
+  locationLabel: string;
+  wardLabel: string;
+  chiefComplaintLabel: string;
+  preferredLanguage: string;
+  namePlaceholder: string;
+  locationPlaceholder: string;
+  wardPlaceholder: string;
+  chiefComplaintPlaceholder: string;
+  startBtn: string;
+  stopBtn: string;
+  listening: string;
+  transcriptTitle: string;
+  transcriptWaiting: string;
+  manualPlaceholder: string;
+  saveCase: string;
+  newTriage: string;
+  dashboard: string;
+  openDashboard: string;
+  systemLive: string;
+  systemChecking: string;
+  systemOffline: string;
+  startingSpeech: string;
+  transcriptPreview: string;
+  speechApiLabel: string;
+  micFooter: string;
+  assignedPriority: string;
+  aiTriageTag: string;
+  priorityCritical: string;
+  priorityUrgent: string;
+  priorityNonUrgent: string;
+  analyzing: string;
+  analyzingSlow: string;
+  clinicalSummary: string;
+  whatsHappening: string;
+  specialistNeeded: string;
+  medicationsToAvoid: string;
+  immediateActions: string;
+  warningSigns: string;
+  warningSignsSubtitle: string;
+  doNotDo: string;
+  doNotDoSubtitle: string;
+  emergencyContacts: string;
+  facilityTitle: string;
+  getDirections: string;
+  estimatedTime: string;
+  followUp: string;
+  icdCode: string;
+  confidenceHigh: string;
+  confidenceMedium: string;
+  confidenceLow: string;
+  printResult: string;
+  printActions: string;
+  replayAudio: string;
+  muteAudio: string;
+  unmuteAudio: string;
+  speaking: string;
+  messageDelivered: string;
+  tapToHear: string;
+  caseSaved: string;
+  saving: string;
+  lightMode: string;
+  darkMode: string;
+  searchLanguage: string;
+  none: string;
+  hospital: string;
+  clinic: string;
+  pharmacy: string;
+  facilityTypeLabel: string;
+};
+
+const en: TranslationKeys = {
+  title: "Emergency Health Triage",
+  subtitle: "Speak clearly. We will assess your symptoms and guide next steps.",
+  poweredBy: "Powered by RuralCare",
+  patientDetails: "Patient intake",
+  captureContext: "Complete patient details before voice assessment.",
+  patientIdLabel: "Patient ID",
+  patientNameLabel: "Patient name",
+  ageLabel: "Age",
+  genderLabel: "Gender",
+  genderMale: "Male",
+  genderFemale: "Female",
+  genderOther: "Other",
+  genderPreferNot: "Prefer not to say",
+  locationLabel: "Location / village",
+  wardLabel: "Ward",
+  chiefComplaintLabel: "Chief complaint (optional)",
+  preferredLanguage: "Preferred language",
+  namePlaceholder: "Full name",
+  locationPlaceholder: "Village, town, or district",
+  wardPlaceholder: "Select ward",
+  chiefComplaintPlaceholder: "Brief description before speaking…",
+  startBtn: "Start voice triage",
+  stopBtn: "Stop & analyze",
+  listening: "Listening…",
+  transcriptTitle: "Live transcript",
+  transcriptWaiting: "Tap the microphone to begin. Your words appear here in real time.",
+  manualPlaceholder: "Or type symptoms manually…",
+  saveCase: "Save to records",
+  newTriage: "New triage",
+  dashboard: "Dashboard",
+  openDashboard: "Open dashboard",
+  systemLive: "System online",
+  systemChecking: "Checking…",
+  systemOffline: "System offline",
+  startingSpeech: "Starting speech recognition…",
+  transcriptPreview: "Updates as you speak",
+  speechApiLabel: "Web Speech API",
+  micFooter: "Voice intake uses browser speech recognition with manual fallback.",
+  assignedPriority: "Triage priority",
+  aiTriageTag: "AI assessment",
+  priorityCritical: "Critical",
+  priorityUrgent: "Urgent",
+  priorityNonUrgent: "Non-urgent",
+  analyzing: "Analyzing symptoms…",
+  analyzingSlow: "Analysis taking longer than usual…",
+  clinicalSummary: "Clinical summary",
+  whatsHappening: "What is likely happening",
+  specialistNeeded: "Specialist needed",
+  medicationsToAvoid: "Medications to avoid",
+  immediateActions: "Immediate actions",
+  warningSigns: "Warning signs",
+  warningSignsSubtitle: "If you see these, call 1990 immediately",
+  doNotDo: "Do not do",
+  doNotDoSubtitle: "Critical contraindications",
+  emergencyContacts: "Emergency contacts",
+  facilityTitle: "Nearest medical facility",
+  getDirections: "Get directions",
+  estimatedTime: "Estimated time to care",
+  followUp: "Follow-up",
+  icdCode: "ICD-10",
+  confidenceHigh: "High confidence",
+  confidenceMedium: "Medium confidence",
+  confidenceLow: "Low confidence",
+  printResult: "Print triage card",
+  printActions: "Print action card",
+  replayAudio: "Hear this again",
+  muteAudio: "Mute audio",
+  unmuteAudio: "Unmute audio",
+  speaking: "Speaking…",
+  messageDelivered: "Message delivered",
+  tapToHear: "Tap to hear your result",
+  caseSaved: "Case saved",
+  saving: "Saving…",
+  lightMode: "Light mode",
+  darkMode: "Dark mode",
+  searchLanguage: "Search languages…",
+  none: "None",
+  hospital: "Hospital",
+  clinic: "Clinic",
+  pharmacy: "Pharmacy",
+  facilityTypeLabel: "Recommended facility",
+};
+
+export const translations: Record<TranslationLanguage, TranslationKeys> = {
+  english: en,
+  sinhala: {
+    ...en,
+    title: "හදිසි සෞඛ්‍ය ත්‍රාසනය",
+    subtitle: "පැහැදිලිව කතා කරන්න. අපි ඔබේ ලක්ෂණ තක්සේරු කර ඊළඟ පියවර මග පෙන්වමු.",
+    patientDetails: "රෝගියා ඇතුළත් කිරීම",
+    captureContext: "හඬ තක්සේරුවට පෙර රෝගියාගේ විස්තර සම්පූර්ණ කරන්න.",
+    patientNameLabel: "රෝගියාගේ නම",
+    locationLabel: "ස්ථානය / ගම",
+    startBtn: "හඬ ත්‍රාසනය ආරම්භ කරන්න",
+    stopBtn: "නවතා විශ්ලේෂණය කරන්න",
+    listening: "සවන් දෙමින්…",
+    saveCase: "වාර්තාවට සුරකින්න",
+    newTriage: "නව ත්‍රාසනය",
+    dashboard: "පුවරුව",
+    analyzing: "ලක්ෂණ විශ්ලේෂණය…",
+    clinicalSummary: "සාමාන්‍ය සාරාංශය",
+    immediateActions: "වහාම කළ යුතු ක්‍රියා",
+    warningSigns: "අනතුරු සංඥා",
+    doNotDo: "නොකරන්න",
+    emergencyContacts: "හදිසි සම්බන්ධතා",
+    facilityTitle: "ළඟම වෛද්‍ය පහසුකම",
+    getDirections: "මාර්ගෝපදේශ",
+    printResult: "ත්‍රාසන කාඩ්පත මුද්‍රණය",
+    replayAudio: "නැවත අහන්න",
+    speaking: "කතා කරමින්…",
+    messageDelivered: "පණිවිඩය ලබා දුන්නා",
+    tapToHear: "ප්‍රතිඵලය අහන්න තට්ටු කරන්න",
+  },
+  tamil: {
+    ...en,
+    title: "அவசர சுகாதார சோதனை",
+    subtitle: "தெளிவாக பேசுங்கள். உங்கள் அறிகுறிகளை மதிப்பிட்டு அடுத்த படிகளை வழிகாட்டுவோம்.",
+    patientDetails: "நோயாளர் உள்ளீடு",
+    patientNameLabel: "நோயாளியின் பெயர்",
+    locationLabel: "இடம் / கிராமம்",
+    startBtn: "குரல் சோதனை தொடங்கு",
+    stopBtn: "நிறுத்தி பகுப்பாய்வு",
+    listening: "கேட்கிறோம்…",
+    saveCase: "பதிவுகளில் சேமி",
+    newTriage: "புதிய சோதனை",
+    dashboard: "டாஷ்போர்டு",
+    analyzing: "அறிகுறிகள் பகுப்பாய்வு…",
+    clinicalSummary: "மருத்துவ சுருக்கம்",
+    immediateActions: "உடனடி நடவடிக்கைகள்",
+    warningSigns: "எச்சரிக்கை அறிகுறிகள்",
+    doNotDo: "செய்ய வேண்டாம்",
+    emergencyContacts: "அவசர தொடர்புகள்",
+    facilityTitle: "அருகிலுள்ள மருத்துவ வசதி",
+    getDirections: "வழிகாட்டுதல்",
+    printResult: "சோதனை அட்டை அச்சிடு",
+    replayAudio: "மீண்டும் கேளுங்கள்",
+    speaking: "பேசுகிறது…",
+    messageDelivered: "செய்தி வழங்கப்பட்டது",
+    tapToHear: "முடிவை கேட்க தட்டவும்",
+  },
+  hindi: {
+    ...en,
+    title: "आपातकालीन स्वास्थ्य ट्राइएज",
+    subtitle: "स्पष्ट बोलें। हम आपके लक्षणों का आकलन कर अगले कदम बताएंगे।",
+    patientDetails: "रोगी प्रवेश",
+    patientNameLabel: "रोगी का नाम",
+    locationLabel: "स्थान / गाँव",
+    startBtn: "आवाज़ ट्राइएज शुरू करें",
+    stopBtn: "रोकें और विश्लेषण करें",
+    listening: "सुन रहे हैं…",
+    saveCase: "रिकॉर्ड में सहेजें",
+    newTriage: "नया ट्राइएज",
+    dashboard: "डैशबोर्ड",
+    analyzing: "लक्षणों का विश्लेषण…",
+    clinicalSummary: "चिकित्सा सारांश",
+    immediateActions: "तत्काल कार्य",
+    warningSigns: "चेतावनी संकेत",
+    doNotDo: "न करें",
+    emergencyContacts: "आपातकालीन संपर्क",
+    facilityTitle: "निकटतम चिकित्सा सुविधा",
+    getDirections: "दिशा-निर्देश",
+    printResult: "ट्राइएज कार्ड प्रिंट करें",
+    replayAudio: "फिर से सुनें",
+    speaking: "बोल रहा है…",
+    messageDelivered: "संदेश दिया गया",
+    tapToHear: "परिणाम सुनने के लिए टैप करें",
+  },
+  bengali: {
+    ...en,
+    title: "জরুরি স্বাস্থ্য ট্রায়াজ",
+    subtitle: "স্পষ্টভাবে বলুন। আমরা আপনার লক্ষণ মূল্যায়ন করে পরবর্তী পদক্ষেপ বলব।",
+    patientDetails: "রোগী ভর্তি",
+    patientNameLabel: "রোগীর নাম",
+    locationLabel: "অবস্থান / গ্রাম",
+    startBtn: "কণ্ঠস্বর ট্রায়াজ শুরু",
+    stopBtn: "থামান ও বিশ্লেষণ",
+    listening: "শুনছি…",
+    saveCase: "রেকর্ডে সংরক্ষণ",
+    newTriage: "নতুন ট্রায়াজ",
+    dashboard: "ড্যাশবোর্ড",
+    analyzing: "লক্ষণ বিশ্লেষণ…",
+    clinicalSummary: "চিকিৎসা সারাংশ",
+    immediateActions: "তাৎক্ষণিক পদক্ষেপ",
+    warningSigns: "সতর্কতা লক্ষণ",
+    doNotDo: "যা করবেন না",
+    emergencyContacts: "জরুরি যোগাযোগ",
+    facilityTitle: "নিকটতম চিকিৎসা কেন্দ্র",
+    getDirections: "দিকনির্দেশ",
+    printResult: "ট্রায়াজ কার্ড প্রিন্ট",
+    replayAudio: "আবার শুনুন",
+    speaking: "বলছে…",
+    messageDelivered: "বার্তা পৌঁছে দেওয়া হয়েছে",
+    tapToHear: "ফলাফল শুনতে ট্যাপ করুন",
+  },
+  urdu: {
+    ...en,
+    title: "ایمرجنسی صحت ٹرائیج",
+    subtitle: "واضح بولیں۔ ہم آپ کی علامات کا جائزہ لے کر اگلے قدم بتائیں گے۔",
+    patientDetails: "مریض داخلہ",
+    patientNameLabel: "مریض کا نام",
+    locationLabel: "مقام / گاؤں",
+    startBtn: "آواز ٹرائیج شروع",
+    stopBtn: "روکیں اور تجزیہ",
+    listening: "سن رہے ہیں…",
+    saveCase: "ریکارڈ میں محفوظ",
+    newTriage: "نیا ٹرائیج",
+    dashboard: "ڈیش بورڈ",
+    analyzing: "علامات کا تجزیہ…",
+    clinicalSummary: "طبی خلاصہ",
+    immediateActions: "فوری اقدامات",
+    warningSigns: "انتباہی علامات",
+    doNotDo: "نہ کریں",
+    emergencyContacts: "ہنگامی رابطے",
+    facilityTitle: "قریبی طبی سہولت",
+    getDirections: "راستہ",
+    printResult: "ٹرائیج کارڈ پرنٹ",
+    replayAudio: "دوبارہ سنیں",
+    speaking: "بول رہا ہے…",
+    messageDelivered: "پیغام پہنچایا",
+    tapToHear: "نتیجہ سننے کے لیے ٹیپ کریں",
+  },
+  punjabi: {
+    ...en,
+    title: "ਐਮਰਜੈਂਸੀ ਸਿਹਤ ਟ੍ਰਾਇਅਜ",
+    subtitle: "ਸਪਸ਼ਟ ਬੋਲੋ। ਅਸੀਂ ਤੁਹਾਡੇ ਲੱਛਣਾਂ ਦਾ ਮੁਲਾਂਕਣ ਕਰਾਂਗੇ।",
+    patientDetails: "ਮਰੀਜ਼ ਦਾਖਲਾ",
+    patientNameLabel: "ਮਰੀਜ਼ ਦਾ ਨਾਮ",
+    locationLabel: "ਟਿਕਾਣਾ / ਪਿੰਡ",
+    startBtn: "ਆਵਾਜ਼ ਟ੍ਰਾਇਅਜ ਸ਼ੁਰੂ",
+    stopBtn: "ਰੋਕੋ ਅਤੇ ਵਿਸ਼ਲੇਸ਼ਣ",
+    listening: "ਸੁਣ ਰਹੇ ਹਾਂ…",
+    saveCase: "ਰਿਕਾਰਡ ਵਿੱਚ ਸੇਵ",
+    newTriage: "ਨਵਾਂ ਟ੍ਰਾਇਅਜ",
+    dashboard: "ਡੈਸ਼ਬੋਰਡ",
+    analyzing: "ਲੱਛਣਾਂ ਦਾ ਵਿਸ਼ਲੇਸ਼ਣ…",
+    clinicalSummary: "ਡਾਕਟਰੀ ਸਾਰ",
+    immediateActions: "ਤੁਰੰਤ ਕਾਰਵਾਈ",
+    warningSigns: "ਚੇਤਾਵਨੀ ਦੇ ਨਿਸ਼ਾਨ",
+    doNotDo: "ਨਾ ਕਰੋ",
+    emergencyContacts: "ਐਮਰਜੈਂਸੀ ਸੰਪਰਕ",
+    facilityTitle: "ਨਜ਼ਦੀਕੀ ਮੈਡੀਕਲ ਸਹੂਲਤ",
+    getDirections: "ਦਿਸ਼ਾ-ਨਿਰਦੇਸ਼",
+    printResult: "ਟ੍ਰਾਇਅਜ ਕਾਰਡ ਪ੍ਰਿੰਟ",
+    replayAudio: "ਦੁਬਾਰਾ ਸੁਣੋ",
+    speaking: "ਬੋਲ ਰਿਹਾ ਹੈ…",
+    messageDelivered: "ਸੁਨੇਹਾ ਭੇਜਿਆ",
+    tapToHear: "ਨਤੀਜਾ ਸੁਣਨ ਲਈ ਟੈਪ ਕਰੋ",
+  },
+  malayalam: {
+    ...en,
+    title: "അടിയന്തര ആരോഗ്യ ട്രയേജ്",
+    subtitle: "വ്യക്തമായി സംസാരിക്കുക. ലക്ഷണങ്ങൾ വിലയിരുത്തി മാർഗനിർദേശം നൽകും.",
+    patientDetails: "രോഗി രേഖ",
+    patientNameLabel: "രോഗിയുടെ പേര്",
+    locationLabel: "സ്ഥലം / ഗ്രാമം",
+    startBtn: "ശബ്ദ ട്രയേജ് ആരംഭിക്കുക",
+    stopBtn: "നിർത്തി വിശകലനം",
+    listening: "കേൾക്കുന്നു…",
+    saveCase: "രേഖയിൽ സംരക്ഷിക്കുക",
+    newTriage: "പുതിയ ട്രയേജ്",
+    dashboard: "ഡാഷ്ബോർഡ്",
+    analyzing: "ലക്ഷണങ്ങൾ വിശകലനം…",
+    clinicalSummary: "ക്ലിനിക്കൽ സംഗ്രഹം",
+    immediateActions: "തൽക്ഷണ നടപടികൾ",
+    warningSigns: "മുന്നറിയിപ്പ് അടയാളങ്ങൾ",
+    doNotDo: "ചെയ്യരുത്",
+    emergencyContacts: "അടിയന്തര ബന്ധങ്ങൾ",
+    facilityTitle: "അടുത്തുള്ള medical facility",
+    getDirections: "ദിശകൾ",
+    printResult: "ട്രയേജ് കാർഡ് പ്രിന്റ്",
+    replayAudio: "വീണ്ടും കേൾക്കുക",
+    speaking: "സംസാരിക്കുന്നു…",
+    messageDelivered: "സന്ദേശം നൽകി",
+    tapToHear: "ഫലം കേൾക്കാൻ ടാപ്പ് ചെയ്യുക",
+  },
+  telugu: {
+    ...en,
+    title: "అత్యవసర ఆరోగ్య ట్రయేజ్",
+    subtitle: "స్పష్టంగా మాట్లాడండి. మీ లక్షణాలను అంచనా వేసి మార్గనిర్దేశం చేస్తాము.",
+    patientDetails: "రోగి ప్రవేశం",
+    patientNameLabel: "రోగి పేరు",
+    locationLabel: "స్థలం / గ్రామం",
+    startBtn: "వాయిస్ ట్రయేజ్ ప్రారంభించు",
+    stopBtn: "ఆపి విశ్లేషించు",
+    listening: "వింటున్నాము…",
+    saveCase: "రికార్డులో సేవ్",
+    newTriage: "కొత్త ట్రయేజ్",
+    dashboard: "డాష్‌బోర్డ్",
+    analyzing: "లక్షణాల విశ్లేషణ…",
+    clinicalSummary: "క్లినికల్ సారాంశం",
+    immediateActions: "తక్షణ చర్యలు",
+    warningSigns: "హెచ్చరిక సంకేతాలు",
+    doNotDo: "చేయవద్దు",
+    emergencyContacts: "అత్యవసర సంప్రదింపులు",
+    facilityTitle: "సమీప వైద్య సౌకర్యం",
+    getDirections: "దిశలు",
+    printResult: "ట్రయేజ్ కార్డ్ ప్రింట్",
+    replayAudio: "మళ్లీ వినండి",
+    speaking: "మాట్లాడుతోంది…",
+    messageDelivered: "సందేశం అందించబడింది",
+    tapToHear: "ఫలితం వినడానికి ట్యాప్ చేయండి",
+  },
+  kannada: {
+    ...en,
+    title: "ತುರ್ತು ಆರೋಗ್ಯ ಟ್ರಯೇಜ್",
+    subtitle: "ಸ್ಪಷ್ಟವಾಗಿ ಮಾತನಾಡಿ. ನಾವು ನಿಮ್ಮ ಲಕ್ಷಣಗಳನ್ನು ಮೌಲ್ಯಮಾಪನ ಮಾಡುತ್ತೇವೆ.",
+    patientDetails: "ರೋಗಿ ಪ್ರವೇಶ",
+    patientNameLabel: "ರೋಗಿಯ ಹೆಸರು",
+    locationLabel: "ಸ್ಥಳ / ಗ್ರಾಮ",
+    startBtn: "ಧ್ವನಿ ಟ್ರಯೇಜ್ ಪ್ರಾರಂಭ",
+    stopBtn: "ನಿಲ್ಲಿಸಿ ವಿಶ್ಲೇಷಿಸಿ",
+    listening: "ಕೇಳುತ್ತಿದ್ದೇವೆ…",
+    saveCase: "ದಾಖಲೆಯಲ್ಲಿ ಉಳಿಸಿ",
+    newTriage: "ಹೊಸ ಟ್ರಯೇಜ್",
+    dashboard: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+    analyzing: "ಲಕ್ಷಣಗಳ ವಿಶ್ಲೇಷಣೆ…",
+    clinicalSummary: "ವೈದ್ಯಕೀಯ ಸಾರಾಂಶ",
+    immediateActions: "ತಕ್ಷಣದ ಕ್ರಮಗಳು",
+    warningSigns: "ಎಚ್ಚರಿಕೆ ಲಕ್ಷಣಗಳು",
+    doNotDo: "ಮಾಡಬೇಡಿ",
+    emergencyContacts: "ತುರ್ತು ಸಂಪರ್ಕಗಳು",
+    facilityTitle: "ಹತ್ತಿರದ ವೈದ್ಯಕೀಯ ಸೌಲಭ್ಯ",
+    getDirections: "ದಿಕ್ಕುಗಳು",
+    printResult: "ಟ್ರಯೇಜ್ ಕಾರ್ಡ್ ಮುದ್ರಣ",
+    replayAudio: "ಮತ್ತೆ ಕೇಳಿ",
+    speaking: "ಮಾತನಾಡುತ್ತಿದೆ…",
+    messageDelivered: "ಸಂದೇಶ ನೀಡಲಾಗಿದೆ",
+    tapToHear: "ಫಲಿತಾಂಶ ಕೇಳಲು ಟ್ಯಾಪ್ ಮಾಡಿ",
+  },
+  marathi: {
+    ...en,
+    title: "आपत्कालीन आरोग्य ट्रायज",
+    subtitle: "स्पष्ट बोला. आम्ही तुमच्या लक्षणांचे मूल्यांकन करू.",
+    patientDetails: "रुग्ण प्रवेश",
+    patientNameLabel: "रुग्णाचे नाव",
+    locationLabel: "स्थान / गाव",
+    startBtn: "आवाज ट्रायज सुरू",
+    stopBtn: "थांबवा आणि विश्लेषण",
+    listening: "ऐकत आहोत…",
+    saveCase: "रेकॉर्डमध्ये जतन",
+    newTriage: "नवीन ट्रायज",
+    dashboard: "डॅशबोर्ड",
+    analyzing: "लक्षणांचे विश्लेषण…",
+    clinicalSummary: "वैद्यकीय सारांश",
+    immediateActions: "तात्काळ कृती",
+    warningSigns: "इशारा चिन्हे",
+    doNotDo: "करू नका",
+    emergencyContacts: "आपत्कालीन संपर्क",
+    facilityTitle: "जवळची वैद्यकीय सुविधा",
+    getDirections: "दिशा",
+    printResult: "ट्रायज कार्ड प्रिंट",
+    replayAudio: "पुन्हा ऐका",
+    speaking: "बोलत आहे…",
+    messageDelivered: "संदेश दिला",
+    tapToHear: "निकाल ऐकण्यासाठी टॅप करा",
+  },
+};
+
+export function getTranslations(lang: TranslationLanguage): TranslationKeys {
+  return translations[lang] ?? translations.english;
+}

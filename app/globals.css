@@ -3,32 +3,75 @@
 @tailwind utilities;
 
 :root {
-  --bg-navy: #0f172a;
+  --brand: #1e3a5f;
+  --brand-dark: #152a45;
+  --brand-violet: #7c3aed;
+  --surface-light: #f8fafc;
+  --surface-dark: #0f172a;
+  --surface-card: #ffffff;
+  --surface-muted: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border: #e2e8f0;
+}
+
+.dark {
+  --surface-card: #1e293b;
+  --surface-muted: #334155;
+  --surface-light: #0f172a;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  --border: #334155;
 }
 
 html {
   scroll-behavior: smooth;
+  font-size: 16px;
 }
 
 body {
-  @apply min-h-screen bg-navy text-slate-100 antialiased;
-  background-color: var(--bg-navy);
-  background-image:
-    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(124, 58, 237, 0.18), transparent),
-    radial-gradient(ellipse 60% 50% at 100% 50%, rgba(16, 185, 129, 0.06), transparent),
-    radial-gradient(ellipse 50% 40% at 0% 80%, rgba(239, 68, 68, 0.05), transparent);
+  @apply min-h-screen bg-surface-light text-text-primary antialiased dark:bg-surface-dark dark:text-text-primary;
 }
 
 @layer utilities {
-  .glass {
-    @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md;
+  .bg-surface-light { background-color: var(--surface-light); }
+  .bg-surface-dark { background-color: var(--surface-dark); }
+  .bg-surface-card { background-color: var(--surface-card); }
+  .bg-surface-muted { background-color: var(--surface-muted); }
+  .text-text-primary { color: var(--text-primary); }
+  .text-text-secondary { color: var(--text-secondary); }
+  .text-text-muted { color: var(--text-muted); }
+  .border-border { border-color: var(--border); }
+  .bg-brand { background-color: var(--brand); }
+  .bg-brand-dark { background-color: var(--brand-dark); }
+  .text-brand { color: var(--brand); }
+  .bg-brand-violet { background-color: var(--brand-violet); }
+  .ring-brand { --tw-ring-color: var(--brand); }
+
+  .clinical-card {
+    @apply rounded-2xl border border-border bg-surface-card p-6 shadow-sm;
   }
 
-  .text-gradient-violet {
-    @apply bg-gradient-to-r from-violet-300 via-accent to-fuchsia-400 bg-clip-text text-transparent;
+  .input-field {
+    @apply w-full rounded-lg border border-border bg-surface-card px-4 py-3 text-base text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand;
   }
 
-  .btn-glow {
-    @apply transition-all duration-200 hover:scale-105 hover:shadow-glow-button active:scale-100;
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-brand px-6 py-3 text-base font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:opacity-50;
   }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border border-border bg-surface-card px-6 py-3 text-base font-semibold text-text-primary transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand;
+  }
+
+  .skeleton {
+    @apply animate-pulse rounded-lg bg-surface-muted;
+  }
+}
+
+@media print {
+  body { background: white; color: black; }
+  .no-print { display: none !important; }
 }
