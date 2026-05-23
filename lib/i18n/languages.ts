@@ -34,6 +34,8 @@ export type LanguageOption = {
   speechCode: string;
   valseaLanguage: string;
   translationKey: TranslationLanguage;
+  /** Short code for Valsea TTS API */
+  valseaCode: string;
 };
 
 export const LANGUAGE_GROUPS = [
@@ -43,19 +45,19 @@ export const LANGUAGE_GROUPS = [
 ];
 
 export const LANGUAGE_OPTIONS: LanguageOption[] = [
-  { code: "english", label: "English", flag: "🇬🇧", group: "sri_lanka", speechCode: "en-US", valseaLanguage: "english", translationKey: "english" },
-  { code: "sinhala", label: "Sinhala", flag: "🇱🇰", group: "sri_lanka", speechCode: "si-LK", valseaLanguage: "sinhala", translationKey: "sinhala" },
-  { code: "tamil_lk", label: "Tamil (Sri Lanka)", flag: "🇱🇰", group: "sri_lanka", speechCode: "ta-LK", valseaLanguage: "tamil", translationKey: "tamil" },
-  { code: "hindi", label: "Hindi", flag: "🇮🇳", group: "india", speechCode: "hi-IN", valseaLanguage: "hindi", translationKey: "hindi" },
-  { code: "bengali_in", label: "Bengali (India)", flag: "🇮🇳", group: "india", speechCode: "bn-IN", valseaLanguage: "bengali", translationKey: "bengali" },
-  { code: "tamil_in", label: "Tamil (India)", flag: "🇮🇳", group: "india", speechCode: "ta-IN", valseaLanguage: "tamil", translationKey: "tamil" },
-  { code: "malayalam", label: "Malayalam", flag: "🇮🇳", group: "india", speechCode: "ml-IN", valseaLanguage: "malayalam", translationKey: "malayalam" },
-  { code: "telugu", label: "Telugu", flag: "🇮🇳", group: "india", speechCode: "te-IN", valseaLanguage: "telugu", translationKey: "telugu" },
-  { code: "kannada", label: "Kannada", flag: "🇮🇳", group: "india", speechCode: "kn-IN", valseaLanguage: "kannada", translationKey: "kannada" },
-  { code: "marathi", label: "Marathi", flag: "🇮🇳", group: "india", speechCode: "mr-IN", valseaLanguage: "marathi", translationKey: "marathi" },
-  { code: "punjabi", label: "Punjabi", flag: "🇮🇳", group: "india", speechCode: "pa-IN", valseaLanguage: "punjabi", translationKey: "punjabi" },
-  { code: "urdu", label: "Urdu", flag: "🇵🇰", group: "pakistan_bangladesh", speechCode: "ur-PK", valseaLanguage: "urdu", translationKey: "urdu" },
-  { code: "bengali_bd", label: "Bengali (Bangladesh)", flag: "🇧🇩", group: "pakistan_bangladesh", speechCode: "bn-BD", valseaLanguage: "bengali", translationKey: "bengali" },
+  { code: "english", label: "English", flag: "🇬🇧", group: "sri_lanka", speechCode: "en-US", valseaLanguage: "en", valseaCode: "en", translationKey: "english" },
+  { code: "sinhala", label: "Sinhala", flag: "🇱🇰", group: "sri_lanka", speechCode: "si-LK", valseaLanguage: "si", valseaCode: "si", translationKey: "sinhala" },
+  { code: "tamil_lk", label: "Tamil (Sri Lanka)", flag: "🇱🇰", group: "sri_lanka", speechCode: "ta-LK", valseaLanguage: "ta", valseaCode: "ta", translationKey: "tamil" },
+  { code: "hindi", label: "Hindi", flag: "🇮🇳", group: "india", speechCode: "hi-IN", valseaLanguage: "hi", valseaCode: "hi", translationKey: "hindi" },
+  { code: "bengali_in", label: "Bengali (India)", flag: "🇮🇳", group: "india", speechCode: "bn-IN", valseaLanguage: "bn", valseaCode: "bn", translationKey: "bengali" },
+  { code: "tamil_in", label: "Tamil (India)", flag: "🇮🇳", group: "india", speechCode: "ta-IN", valseaLanguage: "ta", valseaCode: "ta", translationKey: "tamil" },
+  { code: "malayalam", label: "Malayalam", flag: "🇮🇳", group: "india", speechCode: "ml-IN", valseaLanguage: "ml", valseaCode: "ml", translationKey: "malayalam" },
+  { code: "telugu", label: "Telugu", flag: "🇮🇳", group: "india", speechCode: "te-IN", valseaLanguage: "te", valseaCode: "te", translationKey: "telugu" },
+  { code: "kannada", label: "Kannada", flag: "🇮🇳", group: "india", speechCode: "kn-IN", valseaLanguage: "kn", valseaCode: "kn", translationKey: "kannada" },
+  { code: "marathi", label: "Marathi", flag: "🇮🇳", group: "india", speechCode: "mr-IN", valseaLanguage: "mr", valseaCode: "mr", translationKey: "marathi" },
+  { code: "punjabi", label: "Punjabi", flag: "🇮🇳", group: "india", speechCode: "pa-IN", valseaLanguage: "pa", valseaCode: "pa", translationKey: "punjabi" },
+  { code: "urdu", label: "Urdu", flag: "🇵🇰", group: "pakistan_bangladesh", speechCode: "ur-PK", valseaLanguage: "ur", valseaCode: "ur", translationKey: "urdu" },
+  { code: "bengali_bd", label: "Bengali (Bangladesh)", flag: "🇧🇩", group: "pakistan_bangladesh", speechCode: "bn-BD", valseaLanguage: "bn", valseaCode: "bn", translationKey: "bengali" },
 ];
 
 export function getLanguageOption(code: LanguageCode): LanguageOption {

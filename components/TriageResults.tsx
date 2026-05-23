@@ -1,15 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { facilityByLocation, recommendedFacilityType } from "@/lib/facilities/lookup";
+import type { LanguageOption } from "@/lib/i18n/languages";
 import type { TranslationKeys } from "@/lib/i18n/translations";
 import {
   buildSpokenSummary,
   playSpokenSummary,
   speechRateForPriority,
 } from "@/lib/tts/speech";
-import type { LanguageOption } from "@/lib/i18n/languages";
 import type { TriageResult } from "@/lib/types";
+import { NearbyHospitalsMap } from "./NearbyHospitalsMap";
 import { ConfidenceBadge, MedicalCrossIcon, PriorityBadge } from "./PriorityBadge";
 import { SoundWaveVisualizer } from "./SoundWaveVisualizer";
 
@@ -20,17 +20,22 @@ type Props = {
   patientId: string;
   location: string;
   languageOption: LanguageOption;
+  languageLabel: string;
   timestamp: string;
+  lat: number | null;
+  lng: number | null;
 };
 
 export function TriageResults({
   result,
   t,
-  patientName,
   patientId,
   location,
   languageOption,
+  languageLabel,
   timestamp,
+  lat,
+  lng,
 }: Props) {
   const [checkedActions, setCheckedActions] = useState<Record<number, boolean>>({});
   const [muted, setMuted] = useState(false);
@@ -38,10 +43,14 @@ export function TriageResults({
   const [delivered, setDelivered] = useState(false);
   const [needsTap, setNeedsTap] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const spokenText = buildSpokenSummary(patientName, result);
-  const facility = facilityByLocation(location, result.priority);
-  const facilityType = recommendedFacilityType(result.priority);
+  const spokenText = buildSpokenSummary(result);
   const printRef = useRef<HTMLDivElement>(null);
+  const priorityBorder =
+    result.priority === "P1"
+      ? "border-l-danger bg-danger/5"
+      : result.priority === "P2"
+        ? "border-l-warning bg-warning/5"
+        : "border-l-success bg-success/5";
 
   useEffect(() => {
     const stored = localStorage.getItem("ruralcare-audio-muted");
@@ -62,6 +71,7 @@ export function TriageResults({
     try {
       const playback = await playSpokenSummary({
         text: spokenText,
+        languageLabel,
         valseaLanguage: languageOption.valseaLanguage,
         speechCode: languageOption.speechCode,
         speed: speechRateForPriority(result.priority),
@@ -83,7 +93,7 @@ export function TriageResults({
       setNeedsTap(true);
       setSpeaking(false);
     }
-  }, [languageOption, muted, result.priority, spokenText]);
+  }, [languageLabel, languageOption, muted, result.priority, spokenText]);
 
   useEffect(() => {
     if (muted) return;
@@ -124,11 +134,19 @@ export function TriageResults({
   const timePulsing = result.estimated_time_to_care === "immediately";
 
   return (
-    <div ref={printRef} className="space-y-6 animate-fade-in">
+    <div ref={printRef} className="space-y-6">
+      <h2 className="text-2xl font-bold text-white">{t.resultTitle}</h2>
+
+      {result.priority === "P1" && (
+        <div className="animate-slide-up rounded-2xl border border-danger/50 bg-danger/15 px-5 py-4 text-center font-bold text-danger">
+          🚨 {t.emergencyBanner} — 1990
+        </div>
+      )}
+
       {/* Priority card */}
       <section
         id="triage-print-priority"
-        className="relative rounded-2xl border border-border bg-surface-card p-6 shadow-sm md:p-8"
+        className={`glass-card border-l-4 p-6 md:p-8 animate-slide-up ${priorityBorder}`}
         aria-labelledby="priority-heading"
       >
         <div className="absolute right-4 top-4 flex items-center gap-2">
@@ -335,39 +353,8 @@ export function TriageResults({
         </section>
       )}
 
-      {/* Nearest facility */}
-      <section className="rounded-2xl border border-border bg-surface-card p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-text-primary">{t.facilityTitle}</h3>
-        <p className="mt-1 text-sm text-text-muted">
-          {t.facilityTypeLabel}: {facilityType}
-        </p>
-        <div className="mt-4 rounded-xl border border-border bg-surface-muted p-5">
-          <div className="flex items-center gap-2">
-            <span className="rounded-md bg-brand/10 px-2 py-0.5 text-xs font-semibold uppercase text-brand">
-              {facility.type}
-            </span>
-            <span className="text-lg font-semibold text-text-primary">{facility.name}</span>
-          </div>
-          <div className="mt-3 space-y-1 text-base text-text-secondary">
-            <p>Distance: {facility.distance}</p>
-            <p>Hours: {facility.hours}</p>
-            <p>
-              Phone:{" "}
-              <a href={`tel:${facility.phone.replace(/\s+/g, "")}`} className="font-semibold text-brand hover:underline">
-                {facility.phone}
-              </a>
-            </p>
-          </div>
-          <a
-            href={`https://www.google.com/maps/search/${encodeURIComponent(facility.name)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-4 inline-flex rounded-lg bg-brand px-4 py-2.5 text-base font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-          >
-            {t.getDirections}
-          </a>
-        </div>
-      </section>
+      {/* Nearest hospitals map */}
+      <NearbyHospitalsMap lat={lat} lng={lng} locationLabel={location} priority={result.priority} t={t} />
     </div>
   );
 }

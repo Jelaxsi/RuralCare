@@ -211,7 +211,9 @@ export default function DashboardPage() {
               LOGO
             </div>
             <div>
-              <p className="font-bold text-text-primary">{hospitalConfig.name}</p>
+              <p className="font-bold text-text-primary">
+                {hospitalConfig.name || "RuralCare Command Center"}
+              </p>
               <p className="text-sm text-text-muted">Command Center</p>
             </div>
           </div>

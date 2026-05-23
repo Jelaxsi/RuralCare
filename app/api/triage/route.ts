@@ -98,6 +98,8 @@ export async function POST(req: Request) {
     } else {
       const analysis = await analyzeWithGroq({
         name: input.name,
+        age: input.age,
+        gender: input.gender,
         location: input.location,
         language: input.language,
         transcript: input.transcript,

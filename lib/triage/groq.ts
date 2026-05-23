@@ -1,10 +1,62 @@
 import Groq from "groq-sdk";
+import { applySafetyOverride } from "./safety";
 import type { Confidence, EstimatedTimeToCare, Priority, TriageResult } from "../types";
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
-const SYSTEM_PROMPT =
-  "You are an expert emergency medical triage AI trained in START triage and Manchester Triage System protocols. You work for a rural healthcare network across South Asia. A patient has described symptoms via voice — possibly with speech recognition errors or informal language. Understand what they mean, not just what they said. Always respond ONLY with valid JSON.";
+const SYSTEM_PROMPT = `You are an emergency medical triage AI for rural South Asia. You MUST follow these rules strictly:
+
+CRITICAL RULE: When in doubt, always go HIGHER priority.
+It is better to over-triage than under-triage.
+A missed emergency can kill. A false alarm cannot.
+
+P1 - IMMEDIATELY LIFE THREATENING (call 1990 now):
+ANY of these = automatic P1, no exceptions:
+- Breathing difficulty, cannot breathe, shortness of breath, breathless, chest tightness
+- Chest pain, chest pressure, chest discomfort
+- Left arm pain, left hand pain, jaw pain, shoulder pain with sweating
+- Heart racing, palpitations, irregular heartbeat
+- Face drooping, arm weakness, slurred speech, sudden confusion (stroke signs)
+- Unconscious, unresponsive, collapsed, fainted
+- Severe bleeding that won't stop
+- Seizure, convulsions, fitting
+- Throat swelling, tongue swelling, anaphylaxis
+- Baby not breathing, child unconscious
+- Severe head injury
+- Suspected poisoning or overdose
+
+P2 - URGENT (hospital within 2 hours):
+- High fever above 38C
+- Vomiting blood
+- Severe abdominal pain
+- Suspected fracture or broken bone
+- Deep wound needing stitches
+- Snake bite, animal bite
+- Child with high fever
+- Elderly person who has fallen
+- Severe headache (not worst of life)
+- Urinary retention, cannot urinate
+
+P3 - NON URGENT (pharmacy or clinic tomorrow):
+- Common cold, runny nose
+- Mild headache
+- Mild fever below 38C
+- Sore throat
+- Minor cuts
+- Constipation
+- Mild stomach ache
+
+IMPORTANT:
+- 'cannot breathe' = P1 always
+- 'left hand pain' = P1 always (heart attack sign)
+- 'chest pain' = P1 always
+- Any combination of 2+ symptoms = upgrade priority
+- Elderly or child = upgrade priority by one level
+- Pregnant woman with any pain = P2 minimum
+
+You must understand symptoms described in ANY language including Tamil, Sinhala, Hindi, Bengali, Urdu and all South Asian languages. Translate mentally then assess.
+
+Always respond ONLY with valid JSON.`;
 
 const FALLBACK: TriageResult = {
   priority: "P3",
@@ -30,13 +82,43 @@ const FALLBACK: TriageResult = {
   specialist_needed: null,
 };
 
-function buildUserMessage(
-  name: string,
-  location: string,
-  language: string,
-  transcript: string,
-): string {
-  return `Patient: ${name || "Unknown"}, Location: ${location || "Unknown"}, Language: ${language}
+function languageScriptHint(language: string): string {
+  const l = language.toLowerCase();
+  if (l.includes("tamil")) return "If language is Tamil: write in Tamil script தமிழ்";
+  if (l.includes("sinhala")) return "If language is Sinhala: write in Sinhala script සිංහල";
+  if (l.includes("hindi")) return "If language is Hindi: write in Hindi script हिंदी";
+  if (l.includes("bengali")) return "If language is Bengali: write in Bengali script বাংলা";
+  if (l.includes("urdu")) return "If language is Urdu: write in Urdu script اردو";
+  if (l.includes("malayalam")) return "If language is Malayalam: write in Malayalam script മലയാളം";
+  if (l.includes("telugu")) return "If language is Telugu: write in Telugu script తెలుగు";
+  if (l.includes("kannada")) return "If language is Kannada: write in Kannada script ಕನ್ನಡ";
+  if (l.includes("marathi")) return "If language is Marathi: write in Marathi script मराठी";
+  if (l.includes("punjabi")) return "If language is Punjabi: write in Gurmukhi script ਪੰਜਾਬੀ";
+  return "If language is English: write in English";
+}
+
+function buildUserMessage(params: {
+  name: string;
+  age: string;
+  gender: string;
+  location: string;
+  language: string;
+  transcript: string;
+}): string {
+  const { name, age, gender, location, language, transcript } = params;
+  const scriptHint = languageScriptHint(language);
+
+  return `IMPORTANT: The patient's language is ${language}.
+You must write ALL text fields in the response (likely_condition, reason, what_is_happening, immediate_actions, warning_signs, do_not_do, follow_up, medications_to_avoid, specialist_needed) in ${language}.
+
+${scriptHint}
+(same rule for all other languages — use native script, not English)
+
+Patient: ${name || "Unknown"}
+Age: ${age || "Unknown"}
+Gender: ${gender || "Unknown"}
+Location: ${location || "Unknown"}
+Language: ${language}
 Symptoms: ${transcript}
 
 Respond ONLY with this JSON:
@@ -135,7 +217,7 @@ async function callGroqOnce(
     {
       model: GROQ_MODEL,
       max_tokens: 1024,
-      temperature: 0.2,
+      temperature: 0.1,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userMessage },
@@ -145,9 +227,7 @@ async function callGroqOnce(
   );
 
   const text = response.choices[0]?.message?.content;
-  if (!text) {
-    throw new Error("No text response from Groq");
-  }
+  if (!text) throw new Error("No text response from Groq");
 
   const parsed = extractJson(text) as Record<string, unknown>;
   return normalizeResult(parsed);
@@ -159,6 +239,8 @@ function sleep(ms: number) {
 
 export async function analyzeWithGroq(params: {
   name: string;
+  age: string;
+  gender: string;
   location: string;
   language: string;
   transcript: string;
@@ -166,16 +248,12 @@ export async function analyzeWithGroq(params: {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     console.warn("[triage] GROQ_API_KEY not set — using fallback P3");
-    return { result: FALLBACK, durationMs: 0 };
+    const safe = applySafetyOverride(FALLBACK, params.transcript);
+    return { result: safe, durationMs: 0 };
   }
 
   const client = new Groq({ apiKey, baseURL: "https://api.groq.com/openai/v1" });
-  const userMessage = buildUserMessage(
-    params.name,
-    params.location,
-    params.language,
-    params.transcript,
-  );
+  const userMessage = buildUserMessage(params);
 
   const start = Date.now();
   let lastError: unknown;
@@ -186,21 +264,44 @@ export async function analyzeWithGroq(params: {
       const timeout = setTimeout(() => controller.abort(), 10_000);
 
       try {
-        const result = await callGroqOnce(client, userMessage, controller.signal);
+        let result = await callGroqOnce(client, userMessage, controller.signal);
+        result = applySafetyOverride(result, params.transcript);
         return { result, durationMs: Date.now() - start };
       } finally {
         clearTimeout(timeout);
       }
     } catch (err) {
       lastError = err;
-      if (attempt === 0) {
-        await sleep(500 * Math.pow(2, attempt));
-      }
+      if (attempt === 0) await sleep(500);
     }
   }
 
   console.error("[triage] Groq analysis failed after retry:", lastError);
-  return { result: FALLBACK, durationMs: Date.now() - start };
+  const safe = applySafetyOverride(FALLBACK, params.transcript);
+  return { result: safe, durationMs: Date.now() - start };
+}
+
+export async function translateWithGroq(text: string, language: string): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey || !text.trim()) return text;
+
+  try {
+    const client = new Groq({ apiKey, baseURL: "https://api.groq.com/openai/v1" });
+    const response = await client.chat.completions.create({
+      model: GROQ_MODEL,
+      max_tokens: 512,
+      temperature: 0.2,
+      messages: [
+        {
+          role: "user",
+          content: `Translate this medical triage message to ${language}. Keep it simple, calm and clear. Return ONLY the translated text, nothing else:\n\n${text}`,
+        },
+      ],
+    });
+    return response.choices[0]?.message?.content?.trim() || text;
+  } catch {
+    return text;
+  }
 }
 
 export { FALLBACK as triageFallback };

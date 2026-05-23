@@ -1,59 +1,32 @@
 import type { Priority, TriageResult } from "../types";
 
-function firstSentence(text: string): string {
-  const match = text.match(/^[^.!?]+[.!?]?/);
-  return (match?.[0] ?? text).trim();
-}
-
-export function buildSpokenSummary(
-  patientName: string,
-  result: TriageResult,
-): string {
-  const name = patientName.trim() || "Patient";
-  const happening = firstSentence(result.what_is_happening);
-  const action0 = result.immediate_actions[0] ?? "Follow the guidance on screen.";
-  const action1 = result.immediate_actions[1] ?? "";
-
-  if (result.priority === "P1") {
-    return [
-      `${name}, this is a medical emergency.`,
-      happening,
-      "Call 1990 immediately.",
-      action0,
-      action1,
-      "Help is on the way.",
-    ]
-      .filter(Boolean)
-      .join(" ");
-  }
-
-  if (result.priority === "P2") {
-    return [
-      `${name}, you need medical attention soon.`,
-      happening,
-      action0,
-      action1,
-      `Please go to the nearest clinic within ${result.estimated_time_to_care}.`,
-    ]
-      .filter(Boolean)
-      .join(" ");
-  }
-
-  return [
-    `${name}, this does not appear to be an emergency.`,
-    happening,
-    action0,
-    "Rest and monitor your symptoms.",
-    "Visit a pharmacy if symptoms worsen.",
-  ]
-    .filter(Boolean)
-    .join(" ");
+/** Spoken summary from AI response fields (already in patient's language). */
+export function buildSpokenSummary(result: TriageResult): string {
+  const happening = result.what_is_happening.split(/[.!?]/)[0]?.trim() ?? result.what_is_happening;
+  const action0 = result.immediate_actions[0]?.trim() ?? "";
+  return [happening, action0].filter(Boolean).join(". ");
 }
 
 export function speechRateForPriority(priority: Priority): number {
   if (priority === "P1") return 1.0;
   if (priority === "P3") return 0.85;
   return 0.9;
+}
+
+async function translateForTts(text: string, languageLabel: string): Promise<string> {
+  if (!languageLabel || languageLabel.toLowerCase().includes("english")) return text;
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, language: languageLabel }),
+    });
+    if (!res.ok) return text;
+    const data = (await res.json()) as { translated?: string };
+    return data.translated?.trim() || text;
+  } catch {
+    return text;
+  }
 }
 
 export async function speakWithValsea(
@@ -98,11 +71,14 @@ export function speakWithBrowser(text: string, speechCode: string, rate: number)
 
 export async function playSpokenSummary(params: {
   text: string;
+  languageLabel: string;
   valseaLanguage: string;
   speechCode: string;
   speed: number;
 }): Promise<{ source: "valsea" | "browser"; audio?: HTMLAudioElement }> {
-  const blob = await speakWithValsea(params.text, params.valseaLanguage, params.speed);
+  const text = params.text;
+
+  const blob = await speakWithValsea(text, params.valseaLanguage, params.speed);
   if (blob && blob.size > 0) {
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
@@ -113,11 +89,11 @@ export async function playSpokenSummary(params: {
       return { source: "valsea", audio };
     } catch {
       URL.revokeObjectURL(url);
-      speakWithBrowser(params.text, params.speechCode, params.speed * 0.95);
+      speakWithBrowser(text, params.speechCode, params.speed * 0.95);
       return { source: "browser" };
     }
   }
 
-  speakWithBrowser(params.text, params.speechCode, params.speed * 0.95);
+  speakWithBrowser(text, params.speechCode, params.speed * 0.95);
   return { source: "browser" };
 }

@@ -3,27 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --brand: #1e3a5f;
-  --brand-dark: #152a45;
-  --brand-violet: #7c3aed;
-  --surface-light: #f8fafc;
-  --surface-dark: #0f172a;
-  --surface-card: #ffffff;
-  --surface-muted: #f1f5f9;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --border: #e2e8f0;
-}
-
-.dark {
-  --surface-card: #1e293b;
-  --surface-muted: #334155;
-  --surface-light: #0f172a;
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #64748b;
-  --border: #334155;
+  --bg-deep: #080c14;
+  --primary: #6c63ff;
+  --accent-cyan: #00d4ff;
+  --success: #00e5a0;
+  --warning: #ffb800;
+  --danger: #ff4560;
+  --glass: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 html {
@@ -32,42 +19,61 @@ html {
 }
 
 body {
-  @apply min-h-screen bg-surface-light text-text-primary antialiased dark:bg-surface-dark dark:text-text-primary;
+  @apply min-h-screen antialiased;
+  background-color: var(--bg-deep);
+  color: #f0f4ff;
 }
 
 @layer utilities {
-  .bg-surface-light { background-color: var(--surface-light); }
-  .bg-surface-dark { background-color: var(--surface-dark); }
-  .bg-surface-card { background-color: var(--surface-card); }
-  .bg-surface-muted { background-color: var(--surface-muted); }
-  .text-text-primary { color: var(--text-primary); }
-  .text-text-secondary { color: var(--text-secondary); }
-  .text-text-muted { color: var(--text-muted); }
-  .border-border { border-color: var(--border); }
-  .bg-brand { background-color: var(--brand); }
-  .bg-brand-dark { background-color: var(--brand-dark); }
-  .text-brand { color: var(--brand); }
-  .bg-brand-violet { background-color: var(--brand-violet); }
-  .ring-brand { --tw-ring-color: var(--brand); }
+  .bg-deep { background-color: var(--bg-deep); }
+  .text-primary-violet { color: var(--primary); }
+  .bg-primary-violet { background-color: var(--primary); }
+  .text-accent-cyan { color: var(--accent-cyan); }
+  .bg-accent-cyan { background-color: var(--accent-cyan); }
+  .text-success { color: var(--success); }
+  .text-warning { color: var(--warning); }
+  .text-danger { color: var(--danger); }
+  .border-danger { border-color: var(--danger); }
+  .bg-danger { background-color: var(--danger); }
+  .ring-danger { --tw-ring-color: var(--danger); }
 
-  .clinical-card {
-    @apply rounded-2xl border border-border bg-surface-card p-6 shadow-sm;
+  .glass-nav {
+    @apply border-b border-white/10 bg-white/[0.05] backdrop-blur-xl;
   }
 
-  .input-field {
-    @apply w-full rounded-lg border border-border bg-surface-card px-4 py-3 text-base text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand;
+  .glass-card {
+    @apply rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-md;
   }
 
-  .btn-primary {
-    @apply inline-flex items-center justify-center rounded-lg bg-brand px-6 py-3 text-base font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:opacity-50;
+  .glass-input {
+    @apply w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3.5 text-base text-white placeholder:text-white/30 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40;
   }
 
-  .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-lg border border-border bg-surface-card px-6 py-3 text-base font-semibold text-text-primary transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand;
+  .gradient-heading {
+    @apply bg-gradient-to-r from-[#6C63FF] to-[#00D4FF] bg-clip-text text-transparent;
+  }
+
+  .btn-glow {
+    @apply transition-all duration-200 hover:shadow-[0_0_24px_rgba(108,99,255,0.45)];
+  }
+
+  .btn-primary-glow {
+    @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#6C63FF] to-[#5b54e8] px-6 py-3 text-base font-semibold text-white shadow-[0_0_20px_rgba(108,99,255,0.35)] transition hover:shadow-[0_0_32px_rgba(108,99,255,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:opacity-50;
+  }
+
+  .mesh-bg {
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(108, 99, 255, 0.15), transparent),
+      radial-gradient(ellipse 60% 50% at 80% 20%, rgba(0, 212, 255, 0.08), transparent),
+      radial-gradient(ellipse 50% 40% at 50% 80%, rgba(255, 69, 96, 0.05), transparent);
+  }
+
+  .mic-ring {
+    @apply absolute rounded-full border-2 border-danger/50 animate-ping;
   }
 
   .skeleton {
-    @apply animate-pulse rounded-lg bg-surface-muted;
+    @apply animate-pulse rounded-xl bg-white/[0.06];
   }
 }
 

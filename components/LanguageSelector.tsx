@@ -42,7 +42,7 @@ export function LanguageSelector({
         aria-haspopup="listbox"
         aria-label={`${t.preferredLanguage}: ${selected.label}`}
         onClick={() => setOpen((o) => !o)}
-        className="flex min-w-[200px] items-center justify-between gap-2 rounded-lg border border-border bg-surface-card px-3 py-2.5 text-base text-text-primary shadow-sm transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="flex min-w-[200px] items-center justify-between gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2.5 text-base text-white backdrop-blur-md transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <span className="flex items-center gap-2">
           <span aria-hidden>{selected.flag}</span>
@@ -55,7 +55,7 @@ export function LanguageSelector({
         <div
           role="listbox"
           aria-label={t.preferredLanguage}
-          className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-xl border border-border bg-surface-card shadow-xl"
+          className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-white/10 bg-[#0d1117]/95 shadow-xl backdrop-blur-xl"
         >
           <div className="border-b border-border p-2">
             <input

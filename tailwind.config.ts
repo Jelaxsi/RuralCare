@@ -11,50 +11,49 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        navy: "#0F172A",
-        brand: "#1e3a5f",
-        "brand-dark": "#152a45",
-        "brand-violet": "#7C3AED",
-        accent: "#7C3AED",
-        "p3-emerald": "#10B981",
-        "p2-amber": "#F59E0B",
-        "p1-rose": "#EF4444",
+        deep: "#080C14",
+        primary: "#6C63FF",
+        "accent-cyan": "#00D4FF",
+        success: "#00E5A0",
+        warning: "#FFB800",
+        danger: "#FF4560",
+        navy: "#080C14",
+        accent: "#6C63FF",
+        "p3-emerald": "#00E5A0",
+        "p2-amber": "#FFB800",
+        "p1-rose": "#FF4560",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
       },
-      spacing: {
-        18: "4.5rem",
-        22: "5.5rem",
-        24: "6rem",
-      },
       animation: {
         "fade-in": "fadeIn 0.5s ease-out forwards",
-        "slide-in": "slideIn 0.4s ease-out forwards",
+        "slide-up": "slideUp 0.5s ease-out forwards",
         "pulse-ring": "pulseRing 1.5s ease-out infinite",
-        blink: "blink 1.2s ease-in-out infinite",
+        "spin-slow": "spin 3s linear infinite",
         "sound-bar": "soundBar 0.8s ease-in-out infinite alternate",
+        float: "float 6s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: {
-          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "0%": { opacity: "0", transform: "translateY(12px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
-        slideIn: {
-          "0%": { opacity: "0", transform: "translateX(16px)" },
-          "100%": { opacity: "1", transform: "translateX(0)" },
+        slideUp: {
+          "0%": { opacity: "0", transform: "translateY(24px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
         pulseRing: {
-          "0%": { transform: "scale(1)", opacity: "0.7" },
-          "100%": { transform: "scale(1.5)", opacity: "0" },
-        },
-        blink: {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.35" },
+          "0%": { transform: "scale(1)", opacity: "0.6" },
+          "100%": { transform: "scale(1.8)", opacity: "0" },
         },
         soundBar: {
-          "0%": { height: "20%", opacity: "0.5" },
+          "0%": { height: "20%", opacity: "0.4" },
           "100%": { height: "100%", opacity: "1" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-12px)" },
         },
       },
     },
