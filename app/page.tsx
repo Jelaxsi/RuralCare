@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LanguageSelector } from "@/components/LanguageSelector";
-import { MedicalCrossIcon } from "@/components/PriorityBadge";
 import { MicSoundWave } from "@/components/SoundWaveVisualizer";
 import { SystemStatus } from "@/components/SystemStatus";
 import { TriageResults } from "@/components/TriageResults";
-import { hasHospitalName, hospitalConfig } from "@/lib/hospital/config";
 import {
   getLanguageLabel,
   getLanguageOption,
@@ -56,15 +54,12 @@ function getSpeechRecognitionCtor():
   return w.SpeechRecognition ?? w.webkitSpeechRecognition;
 }
 
-function generatePatientId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID().slice(0, 8).toUpperCase();
-  }
-  return `RC${Date.now().toString(36).toUpperCase()}`;
+function createClientPatientId(): string {
+  return Math.random().toString(36).substring(2, 10).toUpperCase();
 }
 
 export default function TriagePage() {
-  const [patientId] = useState(generatePatientId);
+  const [patientId, setPatientId] = useState("");
   const [patientName, setPatientName] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
@@ -91,6 +86,10 @@ export default function TriagePage() {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const isRecordingRef = useRef(false);
   const intentionalStopRef = useRef(false);
+
+  useEffect(() => {
+    setPatientId(createClientPatientId());
+  }, []);
 
   const transcriptFull = useMemo(() => {
     const spoken = `${finalTranscript} ${interimTranscript}`.trim();
@@ -166,11 +165,8 @@ export default function TriagePage() {
         let final = "";
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0]?.transcript ?? "";
-          if (event.results[i].isFinal) {
-            final += transcript;
-          } else {
-            interim += transcript;
-          }
+          if (event.results[i].isFinal) final += transcript;
+          else interim += transcript;
         }
         if (final) setFinalTranscript((prev) => prev + final);
         setInterimTranscript(interim);
@@ -232,7 +228,7 @@ export default function TriagePage() {
           gender,
           location: patientLocation,
           chiefComplaint,
-          patientId,
+          patientId: patientId || undefined,
           language: getLanguageLabel(language),
           transcript: transcriptBody,
           persist: false,
@@ -281,7 +277,7 @@ export default function TriagePage() {
           gender,
           location: patientLocation,
           chiefComplaint,
-          patientId,
+          patientId: patientId || undefined,
           language: getLanguageLabel(language),
           transcript: transcriptFull,
           persist: true,
@@ -313,6 +309,7 @@ export default function TriagePage() {
     setChiefComplaint("");
     setLanguage("english");
     setCoords(null);
+    setPatientId(createClientPatientId());
   }, [resetSession, stopRecognition]);
 
   useEffect(() => {
@@ -330,28 +327,25 @@ export default function TriagePage() {
   const hasSpeech = Boolean(finalTranscript || interimTranscript);
 
   return (
-    <div className="min-h-screen bg-deep mesh-bg">
-      <header className="glass-nav sticky top-0 z-40">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 md:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent-cyan shadow-[0_0_20px_rgba(108,99,255,0.4)]">
-              <MedicalCrossIcon className="h-5 w-5 text-white" />
+    <div className="min-h-screen bg-deep">
+      {/* Fixed navbar */}
+      <header className="app-nav">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between">
+          <div className="flex items-center">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500">
+              <span className="text-lg font-bold text-white">+</span>
             </div>
-            <div>
-              <p className="text-base font-bold leading-tight text-white">RuralCare</p>
-              <p className="text-[11px] text-white/40">{t.brandSubtitle}</p>
-              {hasHospitalName && (
-                <p className="text-[10px] text-white/30">{hospitalConfig.name}</p>
-              )}
+            <div className="ml-2">
+              <p className="text-base font-semibold text-white">RuralCare</p>
+              <p className="hidden text-xs text-white/40 sm:block">{t.brandSubtitle}</p>
             </div>
           </div>
-
           <div className="flex items-center gap-2">
             <LanguageSelector value={language} onChange={setLanguage} />
             <SystemStatus translationLang={languageOption.translationKey} />
             <Link
               href="/dashboard"
-              className="hidden rounded-full border border-white/10 bg-transparent px-4 py-2 text-sm font-medium text-white/80 transition hover:border-white/25 hover:bg-white/[0.04] hover:text-white md:inline-flex"
+              className="hidden rounded-lg border border-white/10 px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/5 sm:inline-flex"
             >
               {t.dashboard}
             </Link>
@@ -359,40 +353,38 @@ export default function TriagePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 md:px-8 md:py-12">
+      <main className="mx-auto max-w-3xl pb-10">
         {!result && !analyzing && (
           <>
-            <section className="hero-glow relative mb-10 overflow-hidden rounded-3xl px-4 py-10 text-center md:py-14">
-              <h1 className="text-[32px] font-extrabold leading-tight tracking-tight md:text-5xl">
-                <span className="gradient-heading">{t.title}</span>
-              </h1>
-              <p className="mx-auto mt-4 max-w-xl text-lg text-white/50">{t.subtitle}</p>
+            {/* Hero */}
+            <section className="hero-section">
+              <h1 className="hero-title">{t.title}</h1>
+              <p className="mx-auto max-w-md text-base text-white/50">{t.subtitle}</p>
             </section>
 
-            <section className="glass-card mb-8 p-6" aria-labelledby="intake-heading">
-              <h2 id="intake-heading" className="section-label">
+            {/* Patient form */}
+            <section className="form-card mb-6" aria-labelledby="intake-heading">
+              <p id="intake-heading" className="mb-4 text-xs font-semibold uppercase tracking-widest text-violet-400/80">
                 {t.patientDetails}
-              </h2>
+              </p>
+              <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 font-mono text-xs text-violet-300">
+                <span>{t.patientIdLabel}:</span>
+                <span suppressHydrationWarning>{patientId || "--------"}</span>
+              </div>
 
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                <div className="md:col-span-2">
-                  <div className="inline-flex items-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-2.5 font-mono text-sm text-primary">
-                    <IdIcon />
-                    {t.patientIdLabel}: {patientId}
-                  </div>
-                </div>
-
-                <Field label={t.patientNameLabel} icon={<PersonIcon />}>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="form-label">{t.patientNameLabel}</label>
                   <input
                     type="text"
                     value={patientName}
                     onChange={(e) => setPatientName(e.target.value)}
                     placeholder={t.namePlaceholder}
-                    className="glass-input-icon"
+                    className="form-input"
                   />
-                </Field>
-
-                <Field label={t.ageLabel} icon={<CalendarIcon />}>
+                </div>
+                <div>
+                  <label className="form-label">{t.ageLabel}</label>
                   <input
                     type="number"
                     min={0}
@@ -400,96 +392,85 @@ export default function TriagePage() {
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
                     placeholder={t.agePlaceholder}
-                    className="glass-input-icon"
+                    className="form-input"
                   />
-                </Field>
-
-                <Field label={t.genderLabel} icon={<PersonIcon />}>
-                  <select
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value)}
-                    className="glass-input-icon"
-                  >
+                </div>
+                <div>
+                  <label className="form-label">{t.genderLabel}</label>
+                  <select value={gender} onChange={(e) => setGender(e.target.value)} className="form-input">
                     <option value="">{t.genderPreferNot}</option>
                     <option value="male">{t.genderMale}</option>
                     <option value="female">{t.genderFemale}</option>
                   </select>
-                </Field>
-
-                <div className="flex flex-col gap-2 md:col-span-2">
-                  <span className="text-sm font-medium text-white/60">{t.locationLabel}</span>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="form-label">{t.locationLabel}</label>
                   <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <span className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-white/35">
-                        <PinIcon />
-                      </span>
-                      <input
-                        type="text"
-                        value={patientLocation}
-                        onChange={(e) => setPatientLocation(e.target.value)}
-                        placeholder={t.locationPlaceholder}
-                        className="glass-input-icon w-full"
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      value={patientLocation}
+                      onChange={(e) => setPatientLocation(e.target.value)}
+                      placeholder={t.locationPlaceholder}
+                      className="form-input flex-1"
+                    />
                     <button
                       type="button"
                       onClick={() => void detectLocation()}
                       disabled={locating}
-                      className="shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-white transition hover:border-violet-500/50 disabled:opacity-50"
+                      className="shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-white/70 transition hover:bg-white/10 disabled:opacity-50"
                     >
                       {locating ? t.locationDetecting : t.detectLocation}
                     </button>
                   </div>
                 </div>
-
-                <Field label={t.chiefComplaintLabel} icon={<NoteIcon />} className="md:col-span-2">
+                <div className="sm:col-span-2">
+                  <label className="form-label">{t.chiefComplaintLabel}</label>
                   <input
                     type="text"
                     value={chiefComplaint}
                     onChange={(e) => setChiefComplaint(e.target.value)}
                     placeholder={t.chiefComplaintPlaceholder}
-                    className="glass-input-icon"
+                    className="form-input"
                   />
-                </Field>
+                </div>
               </div>
             </section>
 
-            <section className="mb-8 flex flex-col items-center py-4">
+            {/* Mic section */}
+            <section className="flex flex-col items-center gap-4 px-4 py-8">
               {!recording && (
-                <div className="relative flex flex-col items-center">
-                  <span className="mic-idle-ring-2 pointer-events-none" />
-                  <span className="mic-idle-ring-1 pointer-events-none" />
+                <div className="flex flex-col items-center">
                   <button
                     type="button"
                     onClick={startRecording}
                     aria-label={t.startBtn}
-                    className="relative flex h-[100px] w-[100px] items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_30%,#8B83FF,#4338CA)] text-white shadow-[0_0_40px_rgba(108,99,255,0.35)] transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
+                    className="mic-btn-idle"
                   >
-                    <MicIcon />
+                    <MicIcon size={32} />
                   </button>
-                  <p className="mt-5 text-sm text-white/60">{t.startBtn}</p>
+                  <p className="mt-2 text-sm text-white/40">{t.startBtn}</p>
                 </div>
               )}
 
               {recording && (
                 <div className="flex flex-col items-center">
-                  <div className="relative flex h-[100px] w-[100px] items-center justify-center">
-                    <span className="mic-recording-ring inset-0 [animation-delay:0ms]" />
-                    <span className="mic-recording-ring inset-[-14px] [animation-delay:300ms]" />
-                    <span className="mic-recording-ring inset-[-28px] [animation-delay:600ms]" />
-                    <div className="relative flex h-[100px] w-[100px] items-center justify-center rounded-full bg-gradient-to-br from-[#FF4560] to-[#FF6B35] text-white shadow-[0_0_60px_rgba(255,69,96,0.4)]">
-                      <MicIcon />
+                  <div className="relative flex h-[88px] w-[88px] items-center justify-center">
+                    <span className="mic-ring-rec h-[110px] w-[110px]" style={{ animationDelay: "0s" }} />
+                    <span className="mic-ring-rec h-[130px] w-[130px]" style={{ animationDelay: "0.4s" }} />
+                    <span className="mic-ring-rec h-[150px] w-[150px]" style={{ animationDelay: "0.8s" }} />
+                    <div className="mic-btn-recording">
+                      <MicIcon size={32} />
                     </div>
                   </div>
                   <MicSoundWave active />
-                  <p className="mt-4 animate-pulse text-base font-semibold text-white">{t.listening}</p>
+                  <p className="mt-3 animate-pulse text-sm font-medium text-white/70">{t.listening}</p>
                   <button
                     type="button"
                     onClick={() => void stopAndAnalyze()}
-                    className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3 text-base font-semibold text-black shadow-lg transition hover:bg-white/90"
+                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-8 py-2.5 text-sm font-semibold text-gray-900 transition hover:bg-white/90"
                   >
+                    <StopIcon />
                     {t.stopBtn}
-                    <ArrowRightIcon />
                   </button>
                 </div>
               )}
@@ -498,34 +479,30 @@ export default function TriagePage() {
                 <button
                   type="button"
                   onClick={() => void stopAndAnalyze()}
-                  className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3 text-base font-semibold text-black shadow-lg transition hover:bg-white/90"
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-2.5 text-sm font-semibold text-gray-900 transition hover:bg-white/90"
                 >
+                  <StopIcon />
                   {t.stopBtn}
-                  <ArrowRightIcon />
                 </button>
               )}
             </section>
 
-            <section className="glass-card mb-6 p-6">
-              <h2 className="flex items-center gap-2 text-base font-semibold text-white">
-                <MicIconSmall />
-                {t.transcriptTitle}
-              </h2>
-              <div
-                className="mt-4 min-h-[120px] rounded-xl border border-white/[0.08] bg-white/[0.02] p-5 text-base leading-relaxed"
-                aria-live="polite"
-              >
+            {/* Live transcript */}
+            <section className="transcript-card mb-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MicIcon size={16} className="text-violet-400" />
+                  <span className="text-sm font-medium text-white/70">{t.transcriptTitle}</span>
+                </div>
+                <span className="text-xs text-white/30">{languageOption.label}</span>
+              </div>
+              <div className="min-h-[80px] text-sm leading-relaxed" aria-live="polite">
                 {!hasSpeech && !manualSymptoms && (
-                  <div className="flex flex-col items-center justify-center gap-2 py-6 text-center text-white/30">
-                    <MicIconSmall />
-                    <span>{t.transcriptWaiting}</span>
-                  </div>
+                  <p className="py-4 text-center text-white/20">{t.transcriptWaiting}</p>
                 )}
                 {hasSpeech && (
                   <p>
-                    {finalTranscript && (
-                      <span className="font-semibold text-white">{finalTranscript}</span>
-                    )}
+                    {finalTranscript && <span className="text-white">{finalTranscript}</span>}
                     {interimTranscript && (
                       <span className="italic text-white/40">
                         {finalTranscript ? " " : ""}
@@ -535,76 +512,75 @@ export default function TriagePage() {
                   </p>
                 )}
                 {!hasSpeech && manualSymptoms && (
-                  <p className="font-semibold text-white">{manualSymptoms}</p>
+                  <p className="text-white">{manualSymptoms}</p>
                 )}
               </div>
             </section>
 
-            <section className="glass-card p-6">
+            {/* Manual input */}
+            <section className="mx-4">
               <textarea
                 value={manualSymptoms}
                 onChange={(e) => setManualSymptoms(e.target.value)}
-                rows={3}
                 placeholder={t.manualPlaceholder}
-                className="glass-input resize-y"
+                className="form-input h-20 resize-none rounded-2xl"
               />
             </section>
           </>
         )}
 
+        {/* Processing */}
         {analyzing && (
-          <section className="flex flex-col items-center py-20" aria-live="polite">
-            <div className="relative flex h-[100px] w-[100px] items-center justify-center">
-              <span className="absolute inset-0 animate-spin-slow rounded-full bg-gradient-to-r from-primary via-accent-cyan to-primary p-[3px]">
-                <span className="flex h-full w-full items-center justify-center rounded-full bg-[#050A14]" />
-              </span>
-              <div className="relative flex h-[72px] w-[72px] items-center justify-center rounded-full bg-primary/20">
+          <section className="flex flex-col items-center px-4 py-20" aria-live="polite">
+            <div className="relative flex h-[88px] w-[88px] items-center justify-center">
+              <span className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-violet-500 border-r-cyan-400" />
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-violet-600/20">
                 <SparkleIcon />
               </div>
             </div>
-            <p className="mt-8 text-lg font-semibold text-white">{t.analyzing}</p>
-            <div className="mt-8 w-full max-w-2xl space-y-4">
-              <div className="skeleton h-32 w-full rounded-2xl" />
-              <div className="skeleton h-24 w-full rounded-2xl" />
-              <div className="skeleton h-40 w-full rounded-2xl" />
+            <p className="mt-6 flex items-center gap-2 text-base font-medium text-white/80">
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+              {t.analyzing}
+            </p>
+            <div className="mt-8 w-full space-y-3">
+              <div className="skeleton h-28 w-full" />
+              <div className="skeleton h-20 w-full" />
+              <div className="skeleton h-32 w-full" />
             </div>
           </section>
         )}
 
+        {/* Results */}
         {result && !analyzing && (
           <>
-            <TriageResults
-              result={result}
-              t={t}
-              patientId={patientId}
-              location={patientLocation}
-              lat={coords?.lat ?? null}
-              lng={coords?.lng ?? null}
-              languageOption={languageOption}
-              timestamp={resultTimestamp}
-            />
-            <div className="no-print mt-8 flex flex-col gap-4 sm:flex-row">
+            <div className="pt-[calc(64px+16px)]">
+              <TriageResults
+                result={result}
+                t={t}
+                patientId={patientId || "--------"}
+                location={patientLocation}
+                lat={coords?.lat ?? null}
+                lng={coords?.lng ?? null}
+                languageOption={languageOption}
+                timestamp={resultTimestamp}
+              />
+            </div>
+            <div className="no-print mx-4 mt-4 flex gap-3 pb-8">
               <button
                 type="button"
                 onClick={() => void saveCase()}
                 disabled={saveState !== "idle"}
-                className="btn-primary-glow"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-600 py-3 font-medium text-white transition hover:bg-violet-500 disabled:opacity-50"
               >
                 {saveState === "saved" ? t.caseSaved : saveState === "saving" ? t.saving : t.saveCase}
               </button>
               <button
                 type="button"
                 onClick={newTriage}
-                className="rounded-xl border border-white/10 px-6 py-3 font-semibold text-white transition hover:border-primary/50 hover:bg-white/[0.04]"
+                className="flex flex-1 rounded-xl border border-white/10 bg-white/5 py-3 font-medium text-white/70 transition hover:bg-white/10"
               >
                 {t.newTriage}
               </button>
-              <Link
-                href="/dashboard"
-                className="rounded-xl border border-white/10 px-6 py-3 text-center font-semibold text-white transition hover:border-primary/50 hover:bg-white/[0.04]"
-              >
-                {t.openDashboard}
-              </Link>
             </div>
           </>
         )}
@@ -612,7 +588,7 @@ export default function TriagePage() {
         {lastError && (
           <div
             role="alert"
-            className="mt-6 rounded-xl border border-danger/40 bg-danger/10 px-5 py-4 text-danger"
+            className="mx-4 mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
           >
             {lastError}
           </div>
@@ -622,107 +598,36 @@ export default function TriagePage() {
   );
 }
 
-function Field({
-  label,
-  icon,
-  children,
-  className = "",
-}: {
-  label: string;
-  icon: React.ReactNode;
-  children: ReactNode;
-  className?: string;
-}) {
+function MicIcon({ size = 32, className = "" }: { size?: number; className?: string }) {
   return (
-    <label className={`flex flex-col gap-2 ${className}`}>
-      <span className="text-sm font-medium text-white/60">{label}</span>
-      <div className="relative">
-        <span className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-white/35">
-          {icon}
-        </span>
-        {children}
-      </div>
-    </label>
-  );
-}
-
-function MicIcon() {
-  return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className={`text-white ${className}`}
+      aria-hidden
+    >
       <path d="M12 13a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3z" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M7 13a5 5 0 1 0 10 0M12 21v-3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function MicIconSmall() {
+function StopIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="text-primary">
-      <path d="M12 13a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3z" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M7 13a5 5 0 1 0 10 0" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ArrowRightIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-      <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <rect x="6" y="6" width="12" height="12" rx="1" />
     </svg>
   );
 }
 
 function SparkleIcon() {
   return (
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary" aria-hidden>
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400" aria-hidden>
       <path d="M12 3l1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5L12 3z" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M19 15l.75 2.25L22 18l-2.25.75L19 21l-.75-2.25L16 18l2.25-.75L19 15z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function PersonIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <rect x="3" y="5" width="18" height="16" rx="2" />
-      <path d="M3 10h18M8 3v4M16 3v4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function PinIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="12" cy="10" r="2.5" />
-    </svg>
-  );
-}
-
-function NoteIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 3v6h6M8 13h8M8 17h5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IdIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <circle cx="9" cy="12" r="2" />
-      <path d="M15 10h4M15 14h4" strokeLinecap="round" />
     </svg>
   );
 }

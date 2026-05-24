@@ -1,11 +1,50 @@
+import type { TranslationLanguage } from "../i18n/languages";
 import type { Priority, TriageResult } from "../types";
 
-export function buildSpokenSummary(result: TriageResult, callEmergencyPhrase: string): string {
+const VALSEA_LANG: Record<TranslationLanguage, string> = {
+  english: "en",
+  tamil: "ta",
+  sinhala: "si",
+  hindi: "hi",
+  bengali: "bn",
+  urdu: "ur",
+  malayalam: "ml",
+  telugu: "te",
+  kannada: "kn",
+  marathi: "mr",
+  punjabi: "pa",
+};
+
+const BROWSER_LANG: Record<TranslationLanguage, string> = {
+  english: "en-US",
+  tamil: "ta-LK",
+  sinhala: "si-LK",
+  hindi: "hi-IN",
+  bengali: "bn-IN",
+  urdu: "ur-PK",
+  malayalam: "ml-IN",
+  telugu: "te-IN",
+  kannada: "kn-IN",
+  marathi: "mr-IN",
+  punjabi: "pa-IN",
+};
+
+export function getTtsLanguageCodes(lang: TranslationLanguage): {
+  valseaLanguage: string;
+  speechCode: string;
+} {
+  return {
+    valseaLanguage: VALSEA_LANG[lang] ?? "en",
+    speechCode: BROWSER_LANG[lang] ?? "en-US",
+  };
+}
+
+export function buildSpokenSummary(result: TriageResult, callEmergencyPhrase?: string): string {
   return [
     result.reason,
     result.immediate_actions[0],
     result.immediate_actions[1],
-    result.call_emergency ? callEmergencyPhrase : "",
+    result.call_emergency && callEmergencyPhrase ? callEmergencyPhrase : "",
   ]
     .filter(Boolean)
     .join(". ");

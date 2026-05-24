@@ -3,7 +3,25 @@ import type { Confidence, EstimatedTimeToCare, Priority, TriageResult } from "..
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
-const SYSTEM_PROMPT = `You are a senior emergency physician with 20 years experience in emergency medicine. You are triaging patients in rural South Asia.
+const CRITICAL_MEDICAL_RULES = `CRITICAL MEDICAL RULES — NEVER VIOLATE:
+These symptom descriptions in ANY language = P1:
+- Cannot breathe / breathing difficulty / shortness of breath / chest tightness
+- Chest pain / chest pressure / heart pain
+- Left arm pain / jaw pain (cardiac signs)
+- Loss of consciousness / fainting / collapsed
+- Seizure / convulsions / fitting / shaking
+- Stroke signs: face drooping, arm weakness, speech problems, sudden confusion
+- Severe bleeding / blood not stopping
+- Throat closing / tongue swelling / anaphylaxis
+- Very high fever with stiff neck (meningitis)
+- Baby / child not breathing
+
+When a patient describes ANY of the above — even in informal language, even with speech recognition errors — ALWAYS return P1.
+The cost of missing an emergency is death.
+The cost of a false alarm is inconvenience.
+Always choose patient safety.`;
+
+const PHYSICIAN_BASE = `You are a senior emergency physician with 20 years experience in emergency medicine. You are triaging patients in rural South Asia.
 
 Your single most important rule:
 NEVER under-triage. If you are even slightly unsure between P2 and P1, choose P1. A false P1 alarm is acceptable. A missed P1 emergency is not.
@@ -25,7 +43,38 @@ You assess the FULL CLINICAL PICTURE:
 - Are symptoms getting worse or sudden onset?
 - Sudden onset = always more serious
 
-You respond ONLY with valid JSON. Every text field must be written in the patient's language.`;
+You respond ONLY with valid JSON.`;
+
+function buildLanguageInstruction(language: string): string {
+  const l = language.toLowerCase();
+  let scriptLine = "Use the correct native script for this language.";
+  if (l.includes("tamil")) scriptLine = "If Tamil: every field in தமிழ் script";
+  else if (l.includes("sinhala")) scriptLine = "If Sinhala: every field in සිංහල script";
+  else if (l.includes("hindi")) scriptLine = "If Hindi: every field in हिन्दी script";
+  else if (l.includes("bengali")) scriptLine = "If Bengali: every field in বাংলা script";
+  else if (l.includes("urdu")) scriptLine = "If Urdu: every field in اردو script";
+  else if (l.includes("malayalam")) scriptLine = "If Malayalam: every field in മലയാളം script";
+  else if (l.includes("telugu")) scriptLine = "If Telugu: every field in తెలుగు script";
+  else if (l.includes("kannada")) scriptLine = "If Kannada: every field in ಕನ್ನಡ script";
+  else if (l.includes("marathi")) scriptLine = "If Marathi: every field in मराठी script";
+  else if (l.includes("punjabi")) scriptLine = "If Punjabi: every field in ਪੰਜਾਬੀ script";
+  else if (l.includes("english")) scriptLine = "If English: English";
+
+  return `LANGUAGE INSTRUCTION — THIS IS MANDATORY:
+The patient has selected: ${language}
+You MUST write EVERY text field in the JSON response in the ${language} language and script.
+${scriptLine}
+clinical_reasoning must remain in English for medical staff.
+This is non-negotiable. Do not respond in English if the patient selected another language.`;
+}
+
+function buildSystemPrompt(language: string): string {
+  return `${buildLanguageInstruction(language)}
+
+${CRITICAL_MEDICAL_RULES}
+
+${PHYSICIAN_BASE}`;
+}
 
 const FALLBACK: TriageResult = {
   priority: "P3",
@@ -52,21 +101,6 @@ const FALLBACK: TriageResult = {
   specialist_needed: null,
 };
 
-function languageScriptHint(language: string): string {
-  const l = language.toLowerCase();
-  if (l.includes("tamil")) return "If Tamil: use Tamil script";
-  if (l.includes("sinhala")) return "If Sinhala: use Sinhala script";
-  if (l.includes("hindi")) return "If Hindi: use Hindi script";
-  if (l.includes("bengali")) return "If Bengali: use Bengali script";
-  if (l.includes("urdu")) return "If Urdu: use Urdu script";
-  if (l.includes("malayalam")) return "If Malayalam: use Malayalam script";
-  if (l.includes("telugu")) return "If Telugu: use Telugu script";
-  if (l.includes("kannada")) return "If Kannada: use Kannada script";
-  if (l.includes("marathi")) return "If Marathi: use Marathi script";
-  if (l.includes("punjabi")) return "If Punjabi: use Punjabi script";
-  return "If English: use English";
-}
-
 function buildUserMessage(params: {
   name: string;
   age: string;
@@ -76,9 +110,10 @@ function buildUserMessage(params: {
   transcript: string;
 }): string {
   const { name, age, gender, location, language, transcript } = params;
-  const scriptHint = languageScriptHint(language);
 
-  return `You are assessing this patient right now in the emergency department. Make your triage decision.
+  return `REMINDER — Patient language is ${language}. Write ALL patient-facing text fields in ${language}. clinical_reasoning in English only.
+
+You are assessing this patient right now in the emergency department. Make your triage decision.
 
 Patient details:
 - Name: ${name || "Unknown"}
@@ -87,10 +122,6 @@ Patient details:
 - Location: ${location || "Unknown"}
 - Language: ${language}
 - Symptoms as described: ${transcript}
-
-Write ALL response text fields in ${language} language.
-${scriptHint}
-(etc for all languages)
 
 Respond with this exact JSON:
 {
@@ -194,6 +225,7 @@ function normalizeResult(parsed: Record<string, unknown>): TriageResult {
 
 async function callGroqOnce(
   client: Groq,
+  language: string,
   userMessage: string,
   signal?: AbortSignal,
 ): Promise<TriageResult> {
@@ -201,9 +233,9 @@ async function callGroqOnce(
     {
       model: GROQ_MODEL,
       max_tokens: 1500,
-      temperature: 0.1,
+      temperature: 0.05,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: buildSystemPrompt(language) },
         { role: "user", content: userMessage },
       ],
     },
@@ -247,7 +279,12 @@ export async function analyzeWithGroq(params: {
       const timeout = setTimeout(() => controller.abort(), 10_000);
 
       try {
-        const result = await callGroqOnce(client, userMessage, controller.signal);
+        const result = await callGroqOnce(
+          client,
+          params.language,
+          userMessage,
+          controller.signal,
+        );
         return { result, durationMs: Date.now() - start };
       } finally {
         clearTimeout(timeout);

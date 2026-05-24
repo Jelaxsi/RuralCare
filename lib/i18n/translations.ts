@@ -125,7 +125,7 @@ const en: TranslationKeys = {
   locationPlaceholder: "Village, town, or district",
   wardPlaceholder: "Select ward",
   chiefComplaintPlaceholder: "Brief description before speaking…",
-  startBtn: "Tap to begin",
+  startBtn: "Tap to begin assessment",
   stopBtn: "Stop & Analyze",
   listening: "Listening… speak now",
   transcriptTitle: "Live Transcript",
