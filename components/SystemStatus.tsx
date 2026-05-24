@@ -18,7 +18,9 @@ export function SystemStatus({ translationLang }: { translationLang: Translation
         if (!res.ok) throw new Error("offline");
         const data = (await res.json()) as { status?: string };
         if (!cancelled) {
-          setStatus(data.status === "online" ? "online" : "degraded");
+          setStatus(
+            data.status === "online" ? "online" : data.status === "degraded" ? "degraded" : "offline",
+          );
         }
       } catch {
         if (!cancelled) setStatus("offline");
@@ -38,32 +40,35 @@ export function SystemStatus({ translationLang }: { translationLang: Translation
       : status === "online"
         ? t.systemLive
         : status === "degraded"
-          ? "Degraded"
+          ? t.systemDegraded
           : t.systemOffline;
 
   const dotClass =
     status === "online"
-      ? "bg-p3-emerald"
+      ? "bg-success"
       : status === "degraded"
-        ? "bg-p2-amber"
+        ? "bg-warning"
         : status === "checking"
-          ? "bg-text-muted"
-          : "bg-p1-rose";
+          ? "bg-white/30"
+          : "bg-danger";
 
   return (
     <div
-      className="flex items-center gap-2 rounded-lg border border-border bg-surface-card px-3 py-2"
+      className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 backdrop-blur-sm"
       role="status"
       aria-live="polite"
       aria-label={`System status: ${label}`}
     >
-      <span className="relative flex h-2.5 w-2.5">
+      <span className="relative flex h-2 w-2">
         {status === "online" && (
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-p3-emerald/60 opacity-75" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/70 opacity-75" />
         )}
-        <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${dotClass}`} />
+        {status === "degraded" && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning/70 opacity-75" />
+        )}
+        <span className={`relative inline-flex h-2 w-2 rounded-full ${dotClass}`} />
       </span>
-      <span className="text-sm font-medium text-text-secondary">{label}</span>
+      <span className="text-xs font-medium text-white/70">{label}</span>
     </div>
   );
 }
@@ -92,7 +97,7 @@ export function ThemeToggle({
       type="button"
       onClick={toggle}
       aria-label={dark ? t.lightMode : t.darkMode}
-      className="rounded-lg border border-border bg-surface-card p-2.5 text-text-secondary transition hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      className="rounded-full border border-white/10 bg-white/[0.05] p-2 text-white/60 transition hover:border-white/20 hover:text-white"
     >
       {dark ? <SunIcon /> : <MoonIcon />}
     </button>
@@ -101,7 +106,7 @@ export function ThemeToggle({
 
 function SunIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <circle cx="12" cy="12" r="4" />
       <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
     </svg>
@@ -110,7 +115,7 @@ function SunIcon() {
 
 function MoonIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   );

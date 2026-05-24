@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --bg-deep: #080c14;
+  --bg-deep: #050a14;
   --primary: #6c63ff;
   --accent-cyan: #00d4ff;
   --success: #00e5a0;
@@ -38,15 +38,19 @@ body {
   .ring-danger { --tw-ring-color: var(--danger); }
 
   .glass-nav {
-    @apply border-b border-white/10 bg-white/[0.05] backdrop-blur-xl;
+    @apply h-16 border-b border-white/5 bg-white/[0.03] backdrop-blur-xl;
   }
 
   .glass-card {
-    @apply rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-md;
+    @apply rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm;
   }
 
   .glass-input {
-    @apply w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3.5 text-base text-white placeholder:text-white/30 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40;
+    @apply w-full rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-base text-white placeholder:text-white/30 transition-all duration-200 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30;
+  }
+
+  .glass-input-icon {
+    @apply glass-input pl-11;
   }
 
   .gradient-heading {
@@ -63,18 +67,58 @@ body {
 
   .mesh-bg {
     background:
-      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(108, 99, 255, 0.15), transparent),
-      radial-gradient(ellipse 60% 50% at 80% 20%, rgba(0, 212, 255, 0.08), transparent),
-      radial-gradient(ellipse 50% 40% at 50% 80%, rgba(255, 69, 96, 0.05), transparent);
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(108, 99, 255, 0.18), transparent),
+      radial-gradient(ellipse 60% 50% at 80% 20%, rgba(0, 212, 255, 0.1), transparent),
+      radial-gradient(ellipse 50% 40% at 50% 80%, rgba(255, 69, 96, 0.06), transparent);
+    animation: meshShift 12s ease-in-out infinite alternate;
   }
 
-  .mic-ring {
-    @apply absolute rounded-full border-2 border-danger/50 animate-ping;
+  .hero-glow {
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(108, 99, 255, 0.25), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 80% 30%, rgba(0, 212, 255, 0.12), transparent);
+  }
+
+  .mic-idle-ring-1 {
+    @apply absolute rounded-full border-2 border-violet-500/30;
+    inset: -8px;
+  }
+
+  .mic-idle-ring-2 {
+    @apply absolute rounded-full border border-violet-500/10;
+    inset: -20px;
+  }
+
+  .mic-recording-ring {
+    @apply absolute rounded-full border-2 border-danger/40 animate-ping;
+  }
+
+  .section-label {
+    @apply text-xs font-semibold uppercase tracking-[0.2em] text-primary;
+  }
+
+  .result-card {
+    @apply rounded-2xl border border-white/[0.06] bg-white/[0.04] p-5 backdrop-blur-sm transition-colors duration-200 hover:bg-white/[0.06];
   }
 
   .skeleton {
     @apply animate-pulse rounded-xl bg-white/[0.06];
   }
+
+  .animate-stagger {
+    animation: slideUp 0.55s ease-out forwards;
+    opacity: 0;
+  }
+}
+
+@keyframes meshShift {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(8deg); }
+}
+
+@keyframes slideUp {
+  0% { opacity: 0; transform: translateY(24px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 @media print {

@@ -61,7 +61,7 @@ export function ConfidenceBadge({
   t,
 }: {
   confidence: Confidence;
-  t: TranslationKeys;
+  t: Pick<TranslationKeys, "confidenceHigh" | "confidenceMedium" | "confidenceLow">;
 }) {
   const label =
     confidence === "high" ? t.confidenceHigh : confidence === "medium" ? t.confidenceMedium : t.confidenceLow;

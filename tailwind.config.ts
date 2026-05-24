@@ -11,13 +11,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        deep: "#080C14",
+        deep: "#050A14",
         primary: "#6C63FF",
         "accent-cyan": "#00D4FF",
         success: "#00E5A0",
         warning: "#FFB800",
         danger: "#FF4560",
-        navy: "#080C14",
+        navy: "#050A14",
         accent: "#6C63FF",
         "p3-emerald": "#00E5A0",
         "p2-amber": "#FFB800",

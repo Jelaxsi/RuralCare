@@ -34,6 +34,7 @@ export type TranslationKeys = {
   openDashboard: string;
   systemLive: string;
   systemChecking: string;
+  systemDegraded: string;
   systemOffline: string;
   startingSpeech: string;
   transcriptPreview: string;
@@ -102,7 +103,7 @@ export type TranslationKeys = {
 
 const en: TranslationKeys = {
   title: "Emergency Health Triage",
-  subtitle: "Speak your symptoms. We understand every language.",
+  subtitle: "Speak your symptoms in any language. AI will assess and guide you.",
   brandSubtitle: "Emergency Triage System",
   poweredBy: "Powered by RuralCare",
   patientDetails: "Patient Details",
@@ -126,7 +127,7 @@ const en: TranslationKeys = {
   chiefComplaintPlaceholder: "Brief description before speaking…",
   startBtn: "Tap to begin",
   stopBtn: "Stop & Analyze",
-  listening: "Listening… speak clearly",
+  listening: "Listening… speak now",
   transcriptTitle: "Live Transcript",
   transcriptWaiting: "Tap the microphone to begin.",
   manualPlaceholder: "Or type symptoms manually…",
@@ -135,6 +136,7 @@ const en: TranslationKeys = {
   dashboard: "Dashboard",
   openDashboard: "Open dashboard",
   systemLive: "System Online",
+  systemDegraded: "Degraded",
   systemChecking: "Checking…",
   systemOffline: "System offline",
   startingSpeech: "Starting speech recognition…",

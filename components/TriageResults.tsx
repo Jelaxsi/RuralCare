@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { LanguageOption } from "@/lib/i18n/languages";
 import type { TranslationKeys } from "@/lib/i18n/translations";
 import {
@@ -8,9 +8,9 @@ import {
   playSpokenSummary,
   speechRateForPriority,
 } from "@/lib/tts/speech";
-import type { TriageResult } from "@/lib/types";
+import type { Priority, TriageResult } from "@/lib/types";
 import { NearbyHospitalsMap } from "./NearbyHospitalsMap";
-import { ConfidenceBadge, MedicalCrossIcon, PriorityBadge } from "./PriorityBadge";
+import { ConfidenceBadge, MedicalCrossIcon } from "./PriorityBadge";
 import { SoundWaveVisualizer } from "./SoundWaveVisualizer";
 
 type Props = {
@@ -23,6 +23,43 @@ type Props = {
   languageOption: LanguageOption;
   timestamp: string;
 };
+
+const PRIORITY_GRADIENT: Record<Priority, string> = {
+  P1: "from-danger/25 via-danger/10 to-transparent",
+  P2: "from-warning/25 via-warning/10 to-transparent",
+  P3: "from-success/25 via-success/10 to-transparent",
+};
+
+const PRIORITY_BORDER: Record<Priority, string> = {
+  P1: "border-l-danger",
+  P2: "border-l-warning",
+  P3: "border-l-success",
+};
+
+const PRIORITY_TEXT: Record<Priority, string> = {
+  P1: "text-danger",
+  P2: "text-warning",
+  P3: "text-success",
+};
+
+function StaggerCard({
+  index,
+  children,
+  className = "",
+}: {
+  index: number;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`animate-stagger ${className}`}
+      style={{ animationDelay: `${index * 100}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function TriageResults({
   result,
@@ -42,12 +79,8 @@ export function TriageResults({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const spokenText = buildSpokenSummary(result, t.callEmergency);
   const printRef = useRef<HTMLDivElement>(null);
-  const priorityBorder =
-    result.priority === "P1"
-      ? "border-l-danger bg-danger/5"
-      : result.priority === "P2"
-        ? "border-l-warning bg-warning/5"
-        : "border-l-success bg-success/5";
+  const timePulsing = result.estimated_time_to_care === "immediately";
+  let cardIndex = 0;
 
   useEffect(() => {
     const stored = localStorage.getItem("ruralcare-audio-muted");
@@ -127,240 +160,250 @@ export function TriageResults({
     win.print();
   }
 
-  const timePulsing = result.estimated_time_to_care === "immediately";
-
   return (
-    <div ref={printRef} className="space-y-6">
-      <h2 className="text-2xl font-bold text-white">{t.resultTitle}</h2>
+    <div ref={printRef} className="space-y-5">
+      <StaggerCard index={cardIndex++}>
+        <section
+          id="triage-print-priority"
+          className={`relative overflow-hidden rounded-2xl border border-white/[0.06] border-l-4 bg-gradient-to-r p-6 md:p-8 ${PRIORITY_GRADIENT[result.priority]} ${PRIORITY_BORDER[result.priority]}`}
+          aria-labelledby="priority-heading"
+        >
+          {result.priority === "P1" && (
+            <div className="mb-4 text-center text-sm font-bold uppercase tracking-widest text-danger">
+              🚨 {t.emergencyBanner} — 1990
+            </div>
+          )}
 
-      {result.priority === "P1" && (
-        <div className="animate-slide-up rounded-2xl border border-danger/50 bg-danger/15 px-5 py-4 text-center font-bold text-danger">
-          🚨 {t.emergencyBanner} — 1990
-        </div>
-      )}
-
-      {/* Priority card */}
-      <section
-        id="triage-print-priority"
-        className={`glass-card border-l-4 p-6 md:p-8 animate-slide-up ${priorityBorder}`}
-        aria-labelledby="priority-heading"
-      >
-        <div className="absolute right-4 top-4 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleMute}
-            aria-label={muted ? t.unmuteAudio : t.muteAudio}
-            className="rounded-lg border border-border p-2 text-text-secondary hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          >
-            {muted ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <PriorityBadge priority={result.priority} t={t} />
-            <h2 id="priority-heading" className="mt-4 text-2xl font-bold text-text-primary md:text-3xl">
-              {result.likely_condition}
-            </h2>
-            {result.icd_code && (
-              <p className="mt-1 text-sm text-text-muted">
-                {t.icdCode}: <span className="font-mono">{result.icd_code}</span>
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col items-start gap-3 lg:items-end">
-            <ConfidenceBadge confidence={result.confidence} t={t} />
-            <div
-              className={`rounded-lg border border-border bg-surface-muted px-4 py-2 text-base ${
-                timePulsing ? "animate-pulse border-p1-rose/40 text-p1-rose" : "text-text-secondary"
-              }`}
+          <div className="absolute right-4 top-4">
+            <button
+              type="button"
+              onClick={toggleMute}
+              aria-label={muted ? t.unmuteAudio : t.muteAudio}
+              className="rounded-lg border border-white/10 bg-white/[0.05] p-2 text-white/60 transition hover:border-white/20 hover:text-white"
             >
-              <span className="text-sm font-medium">{t.estimatedTime}: </span>
-              <span className="font-semibold capitalize">{result.estimated_time_to_care}</span>
-            </div>
-            <p className="text-sm text-text-muted">
-              ID: {patientId} · {new Date(timestamp).toLocaleString()}
-            </p>
+              {muted ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
+            </button>
           </div>
-        </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-4">
-          {speaking && (
-            <div className="flex items-center gap-2 text-brand-violet">
-              <SoundWaveVisualizer active color="bg-brand-violet" />
-              <span className="text-sm font-medium">{t.speaking}</span>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className={`text-[72px] font-black leading-none ${PRIORITY_TEXT[result.priority]}`}>
+                {result.priority}
+              </p>
+              <h2 id="priority-heading" className="mt-2 text-2xl font-bold text-white md:text-3xl">
+                {result.likely_condition}
+              </h2>
+              {result.icd_code && (
+                <p className="mt-1 text-sm text-white/40">
+                  {t.icdCode}: <span className="font-mono">{result.icd_code}</span>
+                </p>
+              )}
             </div>
-          )}
-          {delivered && !speaking && (
-            <span className="text-sm font-medium text-p3-emerald">✓ {t.messageDelivered}</span>
-          )}
-          {needsTap && (
+            <div className="flex flex-wrap items-center gap-3">
+              <ConfidenceBadge confidence={result.confidence} t={t} />
+              <div
+                className={`rounded-full border px-4 py-1.5 text-sm font-medium ${
+                  timePulsing
+                    ? "animate-pulse border-danger/40 bg-danger/10 text-danger"
+                    : "border-white/10 bg-white/[0.05] text-white/70"
+                }`}
+              >
+                {t.estimatedTime}: {result.estimated_time_to_care}
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-4 text-sm text-white/40">
+            ID: {patientId} · {new Date(timestamp).toLocaleString()}
+          </p>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            {speaking && (
+              <div className="flex items-center gap-2 text-primary">
+                <SoundWaveVisualizer active color="bg-primary" />
+                <span className="text-sm font-medium">{t.speaking}</span>
+              </div>
+            )}
+            {delivered && !speaking && (
+              <span className="text-sm font-medium text-success">✓ {t.messageDelivered}</span>
+            )}
+            {needsTap && (
+              <button
+                type="button"
+                onClick={() => void speak()}
+                className="rounded-full border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-medium text-primary"
+              >
+                {t.tapToHear}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => void speak()}
-              className="rounded-lg border border-brand bg-brand/10 px-4 py-2 text-base font-medium text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-white/70 transition hover:bg-white/[0.06] hover:text-white"
             >
-              {t.tapToHear}
+              <SpeakerOnIcon />
+              {t.replayAudio}
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => void speak()}
-            className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-base font-medium text-text-secondary hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          >
-            <SpeakerOnIcon />
-            {t.replayAudio}
-          </button>
-          <button
-            type="button"
-            onClick={() => printSection("triage-print-priority")}
-            className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-base font-medium text-text-secondary hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          >
-            {t.printResult}
-          </button>
-        </div>
-      </section>
-
-      {/* Clinical summary */}
-      <section className="rounded-2xl border border-border bg-surface-card p-6 shadow-sm">
-        <h3 className="flex items-center gap-2 text-lg font-semibold text-text-primary">
-          <MedicalCrossIcon className="h-5 w-5 text-brand" />
-          {t.clinicalSummary}
-        </h3>
-        <div className="mt-4 space-y-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wider text-text-muted">{t.whatsHappening}</p>
-            <p className="mt-2 text-base leading-relaxed text-text-primary">{result.what_is_happening}</p>
-          </div>
-          {result.specialist_needed && (
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-text-muted">{t.specialistNeeded}</p>
-              <p className="mt-1 text-base text-text-primary">{result.specialist_needed}</p>
-            </div>
-          )}
-          {result.medications_to_avoid.length > 0 && (
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-text-muted">{t.medicationsToAvoid}</p>
-              <ul className="mt-2 list-disc pl-5 text-base text-text-primary">
-                {result.medications_to_avoid.map((m) => (
-                  <li key={m}>{m}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wider text-text-muted">{t.followUp}</p>
-            <p className="mt-1 text-base text-text-primary">{result.follow_up}</p>
-          </div>
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wider text-text-muted">{t.clinicalReasoning}</p>
-            <p className="mt-2 text-base leading-relaxed text-text-secondary">{result.clinical_reasoning}</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Immediate actions */}
-      <section id="triage-print-actions" className="rounded-2xl border border-border bg-surface-card p-6 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <h3 className="text-lg font-semibold text-text-primary">{t.immediateActions}</h3>
-          <button
-            type="button"
-            onClick={() => printSection("triage-print-actions")}
-            className="text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          >
-            {t.printActions}
-          </button>
-        </div>
-        <ol className="mt-4 space-y-3">
-          {result.immediate_actions.map((step, idx) => (
-            <li key={step} className="flex items-start gap-3 rounded-lg border border-border bg-surface-muted p-3">
-              <input
-                type="checkbox"
-                id={`action-${idx}`}
-                checked={Boolean(checkedActions[idx])}
-                onChange={(e) => setCheckedActions((prev) => ({ ...prev, [idx]: e.target.checked }))}
-                className="mt-1 h-5 w-5 rounded border-border text-brand focus:ring-brand"
-                aria-label={`Step ${idx + 1}: ${step}`}
-              />
-              <label htmlFor={`action-${idx}`} className="text-base text-text-primary">
-                <span className="mr-2 font-bold text-brand">{idx + 1}.</span>
-                {step}
-              </label>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {/* Warning signs */}
-      <section className="rounded-2xl border border-p2-amber/40 bg-p2-amber/5 p-6 shadow-sm">
-        <h3 className="flex items-center gap-2 text-lg font-semibold text-p2-amber">
-          <WarningIcon />
-          {t.warningSigns}
-        </h3>
-        <p className="mt-1 text-sm text-text-secondary">{t.warningSignsSubtitle}</p>
-        <ul className="mt-4 space-y-2">
-          {result.warning_signs.map((sign) => (
-            <li key={sign} className="flex items-start gap-2 text-base text-text-primary">
-              <span className="text-p2-amber" aria-hidden>⚠</span>
-              {sign}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Do not do */}
-      <section className="rounded-2xl border border-p1-rose/40 bg-p1-rose/5 p-6 shadow-sm">
-        <h3 className="flex items-center gap-2 text-lg font-semibold text-p1-rose">
-          <StopIcon />
-          {t.doNotDo}
-        </h3>
-        <p className="mt-1 text-sm text-text-secondary">{t.doNotDoSubtitle}</p>
-        <ul className="mt-4 space-y-2">
-          {result.do_not_do.map((item) => (
-            <li key={item} className="flex items-start gap-2 text-base text-text-primary">
-              <span className="text-p1-rose" aria-hidden>✕</span>
-              {item}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Emergency contacts */}
-      {(result.priority === "P1" || result.priority === "P2") && (
-        <section className="rounded-2xl border border-p1-rose/30 bg-surface-card p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-text-primary">{t.emergencyContacts}</h3>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {[
-              { label: "Ambulance (Suwa Seriya)", number: "1990", icon: "🚑", urgent: true },
-              { label: "Police", number: "119", icon: "👮", urgent: false },
-              { label: "Fire & Rescue", number: "110", icon: "🚒", urgent: false },
-            ].map((c) => (
-              <a
-                key={c.number}
-                href={`tel:${c.number}`}
-                className={`flex flex-col items-center rounded-xl border p-4 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                  c.urgent
-                    ? "border-p1-rose/40 bg-p1-rose/10 hover:bg-p1-rose/15"
-                    : "border-border bg-surface-muted hover:bg-surface-light"
-                }`}
-              >
-                <span className="text-2xl" aria-hidden>{c.icon}</span>
-                <span className="mt-2 text-sm text-text-secondary">{c.label}</span>
-                <span className="mt-1 text-2xl font-black text-text-primary">{c.number}</span>
-              </a>
-            ))}
+            <button
+              type="button"
+              onClick={() => printSection("triage-print-priority")}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-white/70 transition hover:bg-white/[0.06] hover:text-white"
+            >
+              {t.printResult}
+            </button>
           </div>
         </section>
+      </StaggerCard>
+
+      <StaggerCard index={cardIndex++}>
+        <section className={`result-card border-l-4 ${PRIORITY_BORDER[result.priority]}`}>
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
+            <MedicalCrossIcon className="h-5 w-5 text-primary" />
+            {t.clinicalSummary}
+          </h3>
+          <div className="mt-4 space-y-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/40">{t.whatsHappening}</p>
+              <p className="mt-2 text-base leading-relaxed text-white/90">{result.what_is_happening}</p>
+            </div>
+            {result.specialist_needed && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/40">{t.specialistNeeded}</p>
+                <p className="mt-1 text-base text-white/90">{result.specialist_needed}</p>
+              </div>
+            )}
+            {result.medications_to_avoid.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/40">{t.medicationsToAvoid}</p>
+                <ul className="mt-2 list-disc pl-5 text-base text-white/90">
+                  {result.medications_to_avoid.map((m) => (
+                    <li key={m}>{m}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/40">{t.followUp}</p>
+              <p className="mt-1 text-base text-white/90">{result.follow_up}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/40">{t.clinicalReasoning}</p>
+              <p className="mt-2 text-base leading-relaxed text-white/60">{result.clinical_reasoning}</p>
+            </div>
+          </div>
+        </section>
+      </StaggerCard>
+
+      <StaggerCard index={cardIndex++}>
+        <section id="triage-print-actions" className="result-card border-l-4 border-l-primary">
+          <div className="flex items-center justify-between gap-4">
+            <h3 className="text-lg font-semibold text-white">{t.immediateActions}</h3>
+            <button
+              type="button"
+              onClick={() => printSection("triage-print-actions")}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              {t.printActions}
+            </button>
+          </div>
+          <ol className="mt-4 space-y-3">
+            {result.immediate_actions.map((step, idx) => (
+              <li
+                key={step}
+                className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3"
+              >
+                <input
+                  type="checkbox"
+                  id={`action-${idx}`}
+                  checked={Boolean(checkedActions[idx])}
+                  onChange={(e) => setCheckedActions((prev) => ({ ...prev, [idx]: e.target.checked }))}
+                  className="mt-1 h-5 w-5 rounded border-white/20 text-primary focus:ring-primary"
+                  aria-label={`Step ${idx + 1}: ${step}`}
+                />
+                <label htmlFor={`action-${idx}`} className="text-base text-white/90">
+                  <span className="mr-2 font-bold text-primary">{idx + 1}.</span>
+                  {step}
+                </label>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </StaggerCard>
+
+      <StaggerCard index={cardIndex++}>
+        <section className="result-card border-l-4 border-l-warning">
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-warning">
+            <WarningIcon />
+            {t.warningSigns}
+          </h3>
+          <p className="mt-1 text-sm text-white/50">{t.warningSignsSubtitle}</p>
+          <ul className="mt-4 space-y-2">
+            {result.warning_signs.map((sign) => (
+              <li key={sign} className="flex items-start gap-2 text-base text-white/90">
+                <span className="text-warning" aria-hidden>⚠</span>
+                {sign}
+              </li>
+            ))}
+          </ul>
+        </section>
+      </StaggerCard>
+
+      <StaggerCard index={cardIndex++}>
+        <section className="result-card border-l-4 border-l-danger">
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-danger">
+            <StopIcon />
+            {t.doNotDo}
+          </h3>
+          <p className="mt-1 text-sm text-white/50">{t.doNotDoSubtitle}</p>
+          <ul className="mt-4 space-y-2">
+            {result.do_not_do.map((item) => (
+              <li key={item} className="flex items-start gap-2 text-base text-white/90">
+                <span className="text-danger" aria-hidden>✕</span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </section>
+      </StaggerCard>
+
+      {(result.priority === "P1" || result.priority === "P2") && (
+        <StaggerCard index={cardIndex++}>
+          <section className="result-card border-l-4 border-l-danger">
+            <h3 className="text-lg font-semibold text-white">{t.emergencyContacts}</h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {[
+                { label: "Ambulance (Suwa Seriya)", number: "1990", icon: "🚑", urgent: true },
+                { label: "Police", number: "119", icon: "👮", urgent: false },
+                { label: "Fire & Rescue", number: "110", icon: "🚒", urgent: false },
+              ].map((c) => (
+                <a
+                  key={c.number}
+                  href={`tel:${c.number}`}
+                  className={`flex flex-col items-center rounded-xl border p-4 text-center transition ${
+                    c.urgent
+                      ? "border-danger/40 bg-danger/10 hover:bg-danger/15"
+                      : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
+                  }`}
+                >
+                  <span className="text-2xl" aria-hidden>{c.icon}</span>
+                  <span className="mt-2 text-sm text-white/50">{c.label}</span>
+                  <span className="mt-1 text-2xl font-black text-white">{c.number}</span>
+                </a>
+              ))}
+            </div>
+          </section>
+        </StaggerCard>
       )}
 
-      {/* Nearest hospitals map */}
-      <NearbyHospitalsMap
-        lat={lat}
-        lng={lng}
-        locationLabel={location}
-        priority={result.priority}
-        t={t}
-      />
+      <StaggerCard index={cardIndex++}>
+        <NearbyHospitalsMap
+          lat={lat}
+          lng={lng}
+          locationLabel={location}
+          priority={result.priority}
+          t={t}
+        />
+      </StaggerCard>
     </div>
   );
 }

@@ -5,11 +5,12 @@ export async function GET() {
   const hasKv = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 
   return NextResponse.json({
-    status: hasGroq ? "online" : "degraded",
+    status: hasGroq ? "online" : "offline",
     services: {
       triage: hasGroq ? "online" : "offline",
+      stt: "browser",
       storage: hasKv ? "online" : "local",
-      tts: Boolean(process.env.NEXT_PUBLIC_VALSEA_API_KEY) ? "online" : "fallback",
+      tts: process.env.NEXT_PUBLIC_VALSEA_API_KEY ? "valsea" : "browser",
     },
     timestamp: new Date().toISOString(),
   });

@@ -35,18 +35,20 @@ export function SoundWaveVisualizer({
   );
 }
 
+const BAR_HEIGHTS = ["45%", "80%", "55%", "95%", "65%"];
+
 export function MicSoundWave({ active }: { active: boolean }) {
   return (
-    <div className="flex h-16 items-center justify-center gap-1" aria-hidden>
-      {Array.from({ length: 12 }).map((_, i) => (
+    <div className="mt-6 flex h-10 items-end justify-center gap-1.5" aria-hidden>
+      {BAR_HEIGHTS.map((height, i) => (
         <span
           key={i}
-          className={`w-1 rounded-full bg-brand transition-all ${
-            active ? "animate-sound-bar" : "h-2 opacity-20"
+          className={`w-1.5 rounded-full bg-gradient-to-t from-primary to-accent-cyan ${
+            active ? "animate-sound-bar" : "opacity-30"
           }`}
           style={{
-            animationDelay: `${i * 0.08}s`,
-            height: active ? undefined : "8px",
+            animationDelay: `${i * 0.1}s`,
+            height: active ? height : "20%",
           }}
         />
       ))}
