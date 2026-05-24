@@ -1,32 +1,18 @@
 import type { Priority, TriageResult } from "../types";
 
-/** Spoken summary from AI response fields (already in patient's language). */
-export function buildSpokenSummary(result: TriageResult): string {
-  const happening = result.what_is_happening.split(/[.!?]/)[0]?.trim() ?? result.what_is_happening;
-  const action0 = result.immediate_actions[0]?.trim() ?? "";
-  return [happening, action0].filter(Boolean).join(". ");
+export function buildSpokenSummary(result: TriageResult, callEmergencyPhrase: string): string {
+  return [
+    result.reason,
+    result.immediate_actions[0],
+    result.immediate_actions[1],
+    result.call_emergency ? callEmergencyPhrase : "",
+  ]
+    .filter(Boolean)
+    .join(". ");
 }
 
 export function speechRateForPriority(priority: Priority): number {
-  if (priority === "P1") return 1.0;
-  if (priority === "P3") return 0.85;
-  return 0.9;
-}
-
-async function translateForTts(text: string, languageLabel: string): Promise<string> {
-  if (!languageLabel || languageLabel.toLowerCase().includes("english")) return text;
-  try {
-    const res = await fetch("/api/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, language: languageLabel }),
-    });
-    if (!res.ok) return text;
-    const data = (await res.json()) as { translated?: string };
-    return data.translated?.trim() || text;
-  } catch {
-    return text;
-  }
+  return priority === "P1" ? 1.0 : 0.85;
 }
 
 export async function speakWithValsea(
@@ -71,14 +57,13 @@ export function speakWithBrowser(text: string, speechCode: string, rate: number)
 
 export async function playSpokenSummary(params: {
   text: string;
-  languageLabel: string;
   valseaLanguage: string;
   speechCode: string;
   speed: number;
 }): Promise<{ source: "valsea" | "browser"; audio?: HTMLAudioElement }> {
-  const text = params.text;
+  const { text, valseaLanguage, speechCode, speed } = params;
 
-  const blob = await speakWithValsea(text, params.valseaLanguage, params.speed);
+  const blob = await speakWithValsea(text, valseaLanguage, speed);
   if (blob && blob.size > 0) {
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
@@ -89,11 +74,11 @@ export async function playSpokenSummary(params: {
       return { source: "valsea", audio };
     } catch {
       URL.revokeObjectURL(url);
-      speakWithBrowser(text, params.speechCode, params.speed * 0.95);
+      speakWithBrowser(text, speechCode, speed);
       return { source: "browser" };
     }
   }
 
-  speakWithBrowser(text, params.speechCode, params.speed * 0.95);
+  speakWithBrowser(text, speechCode, speed);
   return { source: "browser" };
 }

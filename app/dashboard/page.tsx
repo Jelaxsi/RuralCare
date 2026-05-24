@@ -162,7 +162,7 @@ export default function DashboardPage() {
   }, [filtered, selectedIds]);
 
   const markResolved = useCallback(async () => {
-    const ids = [...selectedIds];
+    const ids = Array.from(selectedIds);
     if (!ids.length) return;
     await fetch("/api/triage", {
       method: "PATCH",

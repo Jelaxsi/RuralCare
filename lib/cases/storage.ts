@@ -6,7 +6,7 @@ import type { CaseRecord } from "../types";
 const CASES_KEY = "ruralcare:cases";
 const CASES_PATH = path.join(process.cwd(), "cases.json");
 
-function useKv(): boolean {
+function hasKvConfigured(): boolean {
   return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 }
 
@@ -25,7 +25,7 @@ async function writeToFile(cases: CaseRecord[]): Promise<void> {
 }
 
 export async function readCases(): Promise<CaseRecord[]> {
-  if (useKv()) {
+  if (hasKvConfigured()) {
     try {
       const cases = await kv.get<CaseRecord[]>(CASES_KEY);
       return Array.isArray(cases) ? cases : [];
@@ -37,7 +37,7 @@ export async function readCases(): Promise<CaseRecord[]> {
 }
 
 export async function writeCases(cases: CaseRecord[]): Promise<void> {
-  if (useKv()) {
+  if (hasKvConfigured()) {
     try {
       await kv.set(CASES_KEY, cases);
       return;

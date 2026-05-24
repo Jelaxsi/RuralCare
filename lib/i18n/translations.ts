@@ -95,6 +95,9 @@ export type TranslationKeys = {
   closedNow: string;
   callBtn: string;
   nearestEmergencyBadge: string;
+  callEmergency: string;
+  noHospitalsNearby: string;
+  clinicalReasoning: string;
 };
 
 const en: TranslationKeys = {
@@ -192,6 +195,9 @@ const en: TranslationKeys = {
   closedNow: "Closed",
   callBtn: "Call",
   nearestEmergencyBadge: "NEAREST EMERGENCY FACILITY",
+  callEmergency: "Call 1990 immediately for an ambulance",
+  noHospitalsNearby: "No hospitals found nearby — call 1990 for emergency ambulance",
+  clinicalReasoning: "Clinical reasoning (staff)",
 };
 
 export const translations: Record<TranslationLanguage, TranslationKeys> = {
@@ -217,6 +223,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     systemLive: "● පද්ධතිය සක්‍රියයි",
     saveCase: "වාර්තාවට සුරකින්න",
     dashboard: "පුවරුව",
+    callEmergency: "වහාම 1990 අමතන්න",
   },
   tamil: {
     ...en,
@@ -261,6 +268,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     speaking: "பேசுகிறது…",
     messageDelivered: "செய்தி வழங்கப்பட்டது",
     tapToHear: "முடிவை கேட்க தட்டவும்",
+    callEmergency: "உடனடியாக 1990 ஐ அழைக்கவும்",
   },
   hindi: {
     ...en,
@@ -288,6 +296,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     speaking: "बोल रहा है…",
     messageDelivered: "संदेश दिया गया",
     tapToHear: "परिणाम सुनने के लिए टैप करें",
+    callEmergency: "तुरंत 1990 पर कॉल करें",
   },
   bengali: {
     ...en,
@@ -315,6 +324,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     speaking: "বলছে…",
     messageDelivered: "বার্তা পৌঁছে দেওয়া হয়েছে",
     tapToHear: "ফলাফল শুনতে ট্যাপ করুন",
+    callEmergency: "অবিলম্বে 1990 কল করুন",
   },
   urdu: {
     ...en,
@@ -342,6 +352,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     speaking: "بول رہا ہے…",
     messageDelivered: "پیغام پہنچایا",
     tapToHear: "نتیجہ سننے کے لیے ٹیپ کریں",
+    callEmergency: "فوری طور پر 1990 کال کریں",
   },
   punjabi: {
     ...en,
@@ -369,6 +380,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     speaking: "ਬੋਲ ਰਿਹਾ ਹੈ…",
     messageDelivered: "ਸੁਨੇਹਾ ਭੇਜਿਆ",
     tapToHear: "ਨਤੀਜਾ ਸੁਣਨ ਲਈ ਟੈਪ ਕਰੋ",
+    callEmergency: "ਤੁਰੰਤ 1990 'ਤੇ ਕਾਲ ਕਰੋ",
   },
   malayalam: {
     ...en,
@@ -396,6 +408,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     speaking: "സംസാരിക്കുന്നു…",
     messageDelivered: "സന്ദേശം നൽകി",
     tapToHear: "ഫലം കേൾക്കാൻ ടാപ്പ് ചെയ്യുക",
+    callEmergency: "ഉടനടി 1990 വിളിക്കുക",
   },
   telugu: {
     ...en,
@@ -423,6 +436,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     speaking: "మాట్లాడుతోంది…",
     messageDelivered: "సందేశం అందించబడింది",
     tapToHear: "ఫలితం వినడానికి ట్యాప్ చేయండి",
+    callEmergency: "వెంటనే 1990 కి కాల్ చేయండి",
   },
   kannada: {
     ...en,
@@ -450,6 +464,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     speaking: "ಮಾತನಾಡುತ್ತಿದೆ…",
     messageDelivered: "ಸಂದೇಶ ನೀಡಲಾಗಿದೆ",
     tapToHear: "ಫಲಿತಾಂಶ ಕೇಳಲು ಟ್ಯಾಪ್ ಮಾಡಿ",
+    callEmergency: "ತಕ್ಷಣ 1990 ಗೆ ಕರೆ ಮಾಡಿ",
   },
   marathi: {
     ...en,
@@ -477,6 +492,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     speaking: "बोलत आहे…",
     messageDelivered: "संदेश दिला",
     tapToHear: "निकाल ऐकण्यासाठी टॅप करा",
+    callEmergency: "ताबडतोब 1990 वर कॉल करा",
   },
 };
 

@@ -16,6 +16,17 @@ import {
 import { getTranslations } from "@/lib/i18n/translations";
 import type { TriageResult } from "@/lib/types";
 
+async function resolveAddress(lat: number, lng: number): Promise<string | null> {
+  try {
+    const res = await fetch(`/api/osm/reverse?lat=${lat}&lon=${lng}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { address?: string | null };
+    return data.address ?? null;
+  } catch {
+    return null;
+  }
+}
+
 type TranscriptWord = { text: string; confidence: number; final: boolean };
 
 type WebkitSpeechRecognitionLike = {
@@ -104,17 +115,8 @@ export default function TriagePage() {
       async (pos) => {
         const { latitude, longitude } = pos.coords;
         setCoords({ lat: latitude, lng: longitude });
-        try {
-          const res = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}`,
-          );
-          const data = (await res.json()) as { results?: Array<{ formatted_address?: string }> };
-          const addr = data.results?.[0]?.formatted_address;
-          if (addr) setPatientLocation(addr);
-          else setPatientLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-        } catch {
-          setPatientLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-        }
+        const address = await resolveAddress(latitude, longitude);
+        setPatientLocation(address ?? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         setLocating(false);
       },
       () => {
@@ -520,14 +522,12 @@ export default function TriagePage() {
             <TriageResults
               result={result}
               t={t}
-              patientName={patientName}
               patientId={patientId}
               location={patientLocation}
-              languageOption={languageOption}
-              languageLabel={getLanguageLabel(language)}
-              timestamp={resultTimestamp}
               lat={coords?.lat ?? null}
               lng={coords?.lng ?? null}
+              languageOption={languageOption}
+              timestamp={resultTimestamp}
             />
             <div className="mt-8 flex flex-col gap-4 sm:flex-row no-print">
               <button type="button" onClick={() => void saveCase()} disabled={saveState !== "idle"} className="btn-primary-glow">

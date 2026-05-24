@@ -16,14 +16,12 @@ import { SoundWaveVisualizer } from "./SoundWaveVisualizer";
 type Props = {
   result: TriageResult;
   t: TranslationKeys;
-  patientName: string;
   patientId: string;
   location: string;
-  languageOption: LanguageOption;
-  languageLabel: string;
-  timestamp: string;
   lat: number | null;
   lng: number | null;
+  languageOption: LanguageOption;
+  timestamp: string;
 };
 
 export function TriageResults({
@@ -31,11 +29,10 @@ export function TriageResults({
   t,
   patientId,
   location,
-  languageOption,
-  languageLabel,
-  timestamp,
   lat,
   lng,
+  languageOption,
+  timestamp,
 }: Props) {
   const [checkedActions, setCheckedActions] = useState<Record<number, boolean>>({});
   const [muted, setMuted] = useState(false);
@@ -43,7 +40,7 @@ export function TriageResults({
   const [delivered, setDelivered] = useState(false);
   const [needsTap, setNeedsTap] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const spokenText = buildSpokenSummary(result);
+  const spokenText = buildSpokenSummary(result, t.callEmergency);
   const printRef = useRef<HTMLDivElement>(null);
   const priorityBorder =
     result.priority === "P1"
@@ -71,7 +68,6 @@ export function TriageResults({
     try {
       const playback = await playSpokenSummary({
         text: spokenText,
-        languageLabel,
         valseaLanguage: languageOption.valseaLanguage,
         speechCode: languageOption.speechCode,
         speed: speechRateForPriority(result.priority),
@@ -93,7 +89,7 @@ export function TriageResults({
       setNeedsTap(true);
       setSpeaking(false);
     }
-  }, [languageLabel, languageOption, muted, result.priority, spokenText]);
+  }, [languageOption, muted, result.priority, spokenText]);
 
   useEffect(() => {
     if (muted) return;
@@ -256,6 +252,10 @@ export function TriageResults({
             <p className="text-sm font-semibold uppercase tracking-wider text-text-muted">{t.followUp}</p>
             <p className="mt-1 text-base text-text-primary">{result.follow_up}</p>
           </div>
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-text-muted">{t.clinicalReasoning}</p>
+            <p className="mt-2 text-base leading-relaxed text-text-secondary">{result.clinical_reasoning}</p>
+          </div>
         </div>
       </section>
 
@@ -354,7 +354,13 @@ export function TriageResults({
       )}
 
       {/* Nearest hospitals map */}
-      <NearbyHospitalsMap lat={lat} lng={lng} locationLabel={location} priority={result.priority} t={t} />
+      <NearbyHospitalsMap
+        lat={lat}
+        lng={lng}
+        locationLabel={location}
+        priority={result.priority}
+        t={t}
+      />
     </div>
   );
 }

@@ -7,7 +7,7 @@ export function PriorityBadge({
   size = "lg",
 }: {
   priority: Priority;
-  t: TranslationKeys;
+  t: Pick<TranslationKeys, "priorityCritical" | "priorityUrgent" | "priorityNonUrgent" | "assignedPriority">;
   size?: "sm" | "lg";
 }) {
   const config =

@@ -11,6 +11,7 @@ export type TriageResult = {
   likely_condition: string;
   icd_code: string | null;
   confidence: Confidence;
+  clinical_reasoning: string;
   reason: string;
   what_is_happening: string;
   immediate_actions: string[];
