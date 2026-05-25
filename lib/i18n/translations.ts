@@ -103,6 +103,21 @@ export type TranslationKeys = {
   callEmergency: string;
   noHospitalsNearby: string;
   clinicalReasoning: string;
+  disclaimerLanding: string;
+  disclaimerResult: string;
+  about: string;
+  shareResult: string;
+  copied: string;
+  tryAgain: string;
+  errorGeneric: string;
+  startNewAssessment: string;
+  assessedAt: string;
+  loadingAnalyzing: string;
+  loadingPriority: string;
+  loadingResults: string;
+  loadingWaitTime: string;
+  offlineBanner: string;
+  footerText: string;
 };
 
 const en: TranslationKeys = {
@@ -209,6 +224,23 @@ const en: TranslationKeys = {
   callEmergency: "Call 1990 immediately for an ambulance",
   noHospitalsNearby: "No hospitals found nearby — call 1990 for emergency ambulance",
   clinicalReasoning: "Clinical reasoning (staff)",
+  disclaimerLanding:
+    "RuralCare is an AI-assisted triage tool. It does not replace professional medical advice. Always consult a qualified healthcare provider.",
+  disclaimerResult:
+    "This AI assessment is for guidance only. It is not a diagnosis. Seek professional medical care.",
+  about: "About",
+  shareResult: "Share",
+  copied: "Copied!",
+  tryAgain: "Try Again",
+  errorGeneric: "Something went wrong. Please check your connection and try again.",
+  startNewAssessment: "← Start New Assessment",
+  assessedAt: "Assessed at",
+  loadingAnalyzing: "Analyzing symptoms…",
+  loadingPriority: "Assessing priority…",
+  loadingResults: "Preparing results…",
+  loadingWaitTime: "This usually takes 2–3 seconds",
+  offlineBanner: "You are offline. Some features may not work.",
+  footerText: "RuralCare © 2026 | Not a medical device | Built for rural healthcare",
 };
 
 export const translations: Record<TranslationLanguage, TranslationKeys> = {
@@ -826,5 +858,5 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
 };
 
 export function getTranslations(lang: TranslationLanguage): TranslationKeys {
-  return translations[lang] ?? translations.english;
+  return { ...translations.english, ...(translations[lang] ?? {}) };
 }

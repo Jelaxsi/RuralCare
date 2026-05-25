@@ -1,0 +1,18 @@
+{
+  "name": "RuralCare Emergency Triage",
+  "short_name": "RuralCare",
+  "description": "AI-assisted emergency triage for rural healthcare",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050a14",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

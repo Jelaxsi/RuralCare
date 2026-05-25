@@ -50,6 +50,7 @@ body {
   .form-input {
     @apply w-full rounded-xl border border-white/[0.08] px-3.5 py-2.5 text-sm text-white outline-none transition-all duration-200;
     background: rgba(255, 255, 255, 0.05);
+    min-height: 48px;
   }
 
   .form-input::placeholder {
@@ -109,6 +110,23 @@ body {
   .skeleton {
     @apply animate-pulse rounded-2xl bg-white/[0.06];
   }
+
+  .btn-touch {
+    min-height: 48px;
+  }
+
+  .loading-overlay {
+    @apply fixed inset-0 z-[70] flex items-center justify-center backdrop-blur-sm;
+    background: rgba(5, 10, 20, 0.88);
+  }
+
+  .p1-glow {
+    animation: p1Glow 2s ease-in-out infinite;
+  }
+
+  .page-fade-in {
+    animation: pageFadeIn 0.35s ease-out;
+  }
 }
 
 @keyframes micPing {
@@ -119,6 +137,16 @@ body {
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes p1Glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.25); }
+  50% { box-shadow: 0 0 24px 4px rgba(239, 68, 68, 0.35); }
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media print {

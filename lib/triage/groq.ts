@@ -1,7 +1,7 @@
 import Groq from "groq-sdk";
 import type { Confidence, EstimatedTimeToCare, Priority, TriageResult } from "../types";
 
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+export const GROQ_MODEL = "llama-3.1-8b-instant";
 
 const CRITICAL_TRIAGE_RULES = `CRITICAL TRIAGE RULES — NEVER VIOLATE:
 1. ANY breathing difficulty = P1 immediately
@@ -15,29 +15,9 @@ const CRITICAL_TRIAGE_RULES = `CRITICAL TRIAGE RULES — NEVER VIOLATE:
 
 These rules apply regardless of language used.`;
 
-const PHYSICIAN_BASE = `You are a senior emergency physician with 20 years experience in emergency medicine. You are triaging patients in rural South Asia.
-
-Your single most important rule:
-NEVER under-triage. If you are even slightly unsure between P2 and P1, choose P1. A false P1 alarm is acceptable. A missed P1 emergency is not.
-
-You understand medical symptoms described in ANY language — Tamil, Sinhala, Hindi, Bengali, Urdu, Malayalam, Telugu, Kannada, Marathi, Punjabi, English — and any combination of languages or informal descriptions.
-
-You understand that patients describe symptoms in everyday language, not medical terms:
-- 'my heart is jumping' = palpitations
-- 'left hand feels heavy' = possible cardiac
-- 'cannot get air' = respiratory emergency
-- 'head spinning and vomiting' = possible stroke
-- 'body shaking on its own' = seizure
-- 'face looks different on one side' = stroke
-- 'throat feels like closing' = anaphylaxis
-
-You assess the FULL CLINICAL PICTURE:
-- What is the most dangerous condition this COULD be?
-- What is the patient's vulnerability? (age, gender, pregnancy, existing conditions mentioned)
-- Are symptoms getting worse or sudden onset?
-- Sudden onset = always more serious
-
-You respond ONLY with valid JSON. Keep all text fields concise.`;
+const PHYSICIAN_BASE = `You are a senior emergency physician triaging patients in rural South Asia.
+NEVER under-triage. When unsure between P2 and P1, choose P1.
+Respond ONLY with valid JSON. Be concise. Max 2-3 sentences per field.`;
 
 function buildLanguageInstruction(language: string): string {
   return `MANDATORY LANGUAGE RULE: You MUST write ALL text fields in ${language} language and script.
@@ -45,11 +25,10 @@ If language is "tamil": write in தமிழ் script only.
 If language is "sinhala": write in සිංහල script only.
 If language is "hindi": write in हिन्दी script only.
 If language is "english": write in English only.
-This rule overrides everything else.
 Never write in English if language is not english.`;
 }
 
-function buildSystemPrompt(language: string): string {
+export function buildSystemPrompt(language: string): string {
   return `${buildLanguageInstruction(language)}
 
 ${CRITICAL_TRIAGE_RULES}
@@ -57,7 +36,7 @@ ${CRITICAL_TRIAGE_RULES}
 ${PHYSICIAN_BASE}`;
 }
 
-const FALLBACK: TriageResult = {
+export const FALLBACK: TriageResult = {
   priority: "P3",
   likely_condition: "Non-specific symptoms — monitor and reassess",
   icd_code: null,
@@ -65,7 +44,7 @@ const FALLBACK: TriageResult = {
   clinical_reasoning: "AI analysis unavailable; defaulted to non-urgent pending reassessment.",
   reason: "Unable to complete AI analysis; please monitor symptoms and seek care if they worsen.",
   what_is_happening:
-    "We could not fully analyze your symptoms automatically. This does not mean you are fine — please monitor how you feel and seek care if symptoms worsen.",
+    "We could not fully analyze your symptoms automatically. Please monitor how you feel and seek care if symptoms worsen.",
   immediate_actions: [
     "Rest and stay hydrated",
     "Monitor symptoms closely for the next few hours",
@@ -81,18 +60,20 @@ const FALLBACK: TriageResult = {
   specialist_needed: null,
 };
 
-function buildUserMessage(params: {
+export type GroqTriageParams = {
   name: string;
   age: string;
   gender: string;
   location: string;
   language: string;
   transcript: string;
-}): string {
+};
+
+export function buildUserMessage(params: GroqTriageParams): string {
   const { name, age, gender, location, language, transcript } = params;
 
   return `RESPOND IN ${language.toUpperCase()} LANGUAGE ONLY.
-Every text field must be in ${language} script.
+Respond in maximum 3 sentences. Be concise.
 
 Patient symptoms: ${transcript}
 
@@ -101,29 +82,25 @@ Patient details:
 - Age: ${age || "Unknown"}
 - Gender: ${gender || "Unknown"}
 - Location: ${location || "Unknown"}
-- Language: ${language}
 
 Respond with this exact JSON only:
 {
   "priority": "P1" or "P2" or "P3",
-  "likely_condition": "condition name in patient language",
+  "likely_condition": "short condition name",
   "confidence": "high" or "medium" or "low",
-  "reason": "one sentence in patient language",
-  "what_is_happening": "2 sentences max in patient language",
-  "immediate_actions": ["action 1", "action 2", "action 3"],
+  "reason": "one sentence",
+  "what_is_happening": "one sentence max",
+  "immediate_actions": ["action 1", "action 2"],
   "call_emergency": true or false,
   "emergency_number": "1990" or null,
-  "warning_signs": ["sign 1", "sign 2"],
+  "warning_signs": ["sign 1"],
   "do_not_do": ["item 1"],
   "estimated_time_to_care": "immediately" or "within 1 hour" or "within 4 hours" or "within 24 hours",
-  "follow_up": "one sentence in patient language"
+  "follow_up": "one sentence"
+}`;
 }
 
-Use your full medical knowledge to assess this patient.
-Trust the symptoms. When in doubt — escalate.`;
-}
-
-function extractJson(text: string): unknown {
+export function extractJson(text: string): unknown {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
   const raw = fenced?.[1]?.trim() ?? trimmed;
@@ -133,7 +110,7 @@ function extractJson(text: string): unknown {
   return JSON.parse(raw.slice(start, end + 1));
 }
 
-function normalizeResult(parsed: Record<string, unknown>): TriageResult {
+export function normalizeResult(parsed: Record<string, unknown>): TriageResult {
   const priority = (["P1", "P2", "P3"].includes(String(parsed.priority))
     ? parsed.priority
     : "P3") as Priority;
@@ -191,6 +168,29 @@ function normalizeResult(parsed: Record<string, unknown>): TriageResult {
   };
 }
 
+function getClient(): Groq | null {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return null;
+  return new Groq({ apiKey });
+}
+
+export async function createTriageCompletionStream(params: GroqTriageParams) {
+  const client = getClient();
+  if (!client) throw new Error("GROQ_API_KEY not configured");
+
+  return client.chat.completions.create({
+    model: GROQ_MODEL,
+    max_tokens: 200,
+    temperature: 0.1,
+    stream: true,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: buildSystemPrompt(params.language) },
+      { role: "user", content: buildUserMessage(params) },
+    ],
+  });
+}
+
 async function callGroqOnce(
   client: Groq,
   language: string,
@@ -200,8 +200,8 @@ async function callGroqOnce(
   const response = await client.chat.completions.create(
     {
       model: GROQ_MODEL,
-      max_tokens: 2048,
-      temperature: 0.05,
+      max_tokens: 200,
+      temperature: 0.1,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: buildSystemPrompt(language) },
@@ -222,23 +222,16 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function analyzeWithGroq(params: {
-  name: string;
-  age: string;
-  gender: string;
-  location: string;
-  language: string;
-  transcript: string;
-}): Promise<{ result: TriageResult; durationMs: number }> {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
+export async function analyzeWithGroq(
+  params: GroqTriageParams,
+): Promise<{ result: TriageResult; durationMs: number }> {
+  const client = getClient();
+  if (!client) {
     console.warn("[triage] GROQ_API_KEY not set — using fallback P3");
     return { result: FALLBACK, durationMs: 0 };
   }
 
-  const client = new Groq({ apiKey });
   const userMessage = buildUserMessage(params);
-
   const start = Date.now();
   let lastError: unknown;
 
@@ -248,12 +241,7 @@ export async function analyzeWithGroq(params: {
       const timeout = setTimeout(() => controller.abort(), 10_000);
 
       try {
-        const result = await callGroqOnce(
-          client,
-          params.language,
-          userMessage,
-          controller.signal,
-        );
+        const result = await callGroqOnce(client, params.language, userMessage, controller.signal);
         return { result, durationMs: Date.now() - start };
       } finally {
         clearTimeout(timeout);

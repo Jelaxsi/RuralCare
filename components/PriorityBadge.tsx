@@ -67,10 +67,10 @@ export function ConfidenceBadge({
     confidence === "high" ? t.confidenceHigh : confidence === "medium" ? t.confidenceMedium : t.confidenceLow;
   const cls =
     confidence === "high"
-      ? "border-p3-emerald/40 bg-p3-emerald/10 text-p3-emerald"
+      ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
       : confidence === "medium"
-        ? "border-p2-amber/40 bg-p2-amber/10 text-p2-amber"
-        : "border-text-muted/40 bg-surface-muted text-text-secondary";
+        ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
+        : "border-red-500/40 bg-red-500/15 text-red-300";
 
   return (
     <span className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${cls}`}>

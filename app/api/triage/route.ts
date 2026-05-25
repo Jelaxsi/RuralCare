@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { addCase, deleteCase, readCases, updateCases } from "@/lib/cases/storage";
 import { hospitalConfig } from "@/lib/hospital/config";
 import { resolveEffectiveGroqLanguageFromInput } from "@/lib/i18n/speech-lang";
-import { analyzeWithGroq } from "@/lib/triage/groq";
+import {
+  analyzeWithGroq,
+  createTriageCompletionStream,
+  extractJson,
+  normalizeResult,
+} from "@/lib/triage/groq";
 import { checkRateLimit, getClientIp } from "@/lib/triage/rate-limit";
 import { validateTriageInput } from "@/lib/triage/validation";
 import type { CaseRecord, TriageResult } from "@/lib/types";
@@ -90,12 +95,77 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Transcript required for analysis" }, { status: 400 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const streamRequested = searchParams.get("stream") === "1";
+
   try {
     let triage: TriageResult;
     let durationMs = 0;
 
     if (persist && body.triageResult && body.triageResult.priority) {
       triage = body.triageResult;
+    } else if (!persist && streamRequested) {
+      const groqLanguage = resolveEffectiveGroqLanguageFromInput(
+        input.language,
+        input.transcript,
+      );
+      const encoder = new TextEncoder();
+      const groqParams = {
+        name: input.name,
+        age: input.age,
+        gender: input.gender,
+        location: input.location,
+        language: groqLanguage,
+        transcript: input.transcript,
+      };
+
+      const readable = new ReadableStream({
+        async start(controller) {
+          const start = Date.now();
+          let full = "";
+
+          try {
+            const stream = await createTriageCompletionStream(groqParams);
+
+            for await (const chunk of stream) {
+              const text = chunk.choices[0]?.delta?.content ?? "";
+              if (!text) continue;
+              full += text;
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ type: "delta", content: text })}\n\n`),
+              );
+            }
+
+            const parsed = extractJson(full) as Record<string, unknown>;
+            const result = normalizeResult(parsed);
+            durationMs = Date.now() - start;
+            logTriage(ip, result.priority, durationMs);
+
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ type: "done", result, durationMs })}\n\n`,
+              ),
+            );
+            controller.close();
+          } catch (err) {
+            console.error("[triage] stream error:", err);
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ type: "error", message: "Triage analysis failed" })}\n\n`,
+              ),
+            );
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(readable, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        },
+      });
     } else {
       const groqLanguage = resolveEffectiveGroqLanguageFromInput(
         input.language,

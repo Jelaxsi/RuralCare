@@ -206,17 +206,15 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-surface-light dark:bg-surface-dark">
       <header className="sticky top-0 z-40 border-b border-border bg-surface-card/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-muted text-xs font-bold text-brand">
-              LOGO
+          <Link href="/" className="flex items-center gap-3 transition hover:opacity-90" aria-label="Back to RuralCare home">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 text-lg font-bold text-white">
+              +
             </div>
             <div>
-              <p className="font-bold text-text-primary">
-                {hospitalConfig.name || "RuralCare Command Center"}
-              </p>
-              <p className="text-sm text-text-muted">Command Center</p>
+              <p className="font-bold text-text-primary">RuralCare</p>
+              <p className="text-sm text-text-muted">← Home · Command Center</p>
             </div>
-          </div>
+          </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle translationLang="english" />
             <Link href="/" className="btn-secondary py-2 text-sm">

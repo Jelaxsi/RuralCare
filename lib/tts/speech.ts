@@ -1,49 +1,9 @@
-import type { TranslationKeys } from "../i18n/translations";
 import type { Priority, TriageResult } from "../types";
 
-export function buildSpokenSummary(
-  result: TriageResult,
-  t: Pick<
-    TranslationKeys,
-    | "whatsHappening"
-    | "followUp"
-    | "clinicalReasoning"
-    | "immediateActions"
-    | "warningSigns"
-    | "doNotDo"
-  >,
-): string {
-  const parts: string[] = [];
-
-  if (result.likely_condition.trim()) {
-    parts.push(result.likely_condition.trim());
-  }
-  if (result.reason.trim()) {
-    parts.push(result.reason.trim());
-  }
-  if (result.what_is_happening.trim()) {
-    parts.push(`${t.whatsHappening}. ${result.what_is_happening.trim()}`);
-  }
-  if (result.immediate_actions.length > 0) {
-    parts.push(`${t.immediateActions}. ${result.immediate_actions.join(". ")}`);
-  }
-  if (result.warning_signs.length > 0) {
-    parts.push(`${t.warningSigns}. ${result.warning_signs.join(". ")}`);
-  }
-  if (result.do_not_do.length > 0) {
-    parts.push(`${t.doNotDo}. ${result.do_not_do.join(". ")}`);
-  }
-  if (result.follow_up.trim()) {
-    parts.push(`${t.followUp}. ${result.follow_up.trim()}`);
-  }
-  if (result.clinical_reasoning.trim()) {
-    parts.push(`${t.clinicalReasoning}. ${result.clinical_reasoning.trim()}`);
-  }
-  if (result.specialist_needed?.trim()) {
-    parts.push(result.specialist_needed.trim());
-  }
-
-  return parts.filter(Boolean).join(". ");
+export function buildSpokenSummary(result: TriageResult): string {
+  return result.reason?.trim()
+    ? result.reason.trim().substring(0, 100)
+    : "Assessment complete";
 }
 
 export function speechRateForPriority(priority: Priority): number {
@@ -59,6 +19,20 @@ function browserSpeak(text: string, lang: string): void {
   window.speechSynthesis.speak(u);
 }
 
+/** Fire-and-forget warm-up so the TTS route is hot before triage finishes. */
+export function prewarmTts(speechCode = "en-US"): void {
+  if (typeof window === "undefined") return;
+
+  fetch("/api/tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text: " ",
+      language: speechCode.split("-")[0],
+    }),
+  }).catch(() => {});
+}
+
 export async function playSpokenSummary(params: {
   text: string;
   speechCode: string;
@@ -68,8 +42,8 @@ export async function playSpokenSummary(params: {
 
   if (typeof window === "undefined") return;
 
-  // OpenAI tts-1 input limit is 4096 characters
-  const spokenText = text.substring(0, 4096);
+  // Keep TTS input short for faster audio generation
+  const spokenText = text.substring(0, 100);
 
   try {
     const res = await fetch("/api/tts", {

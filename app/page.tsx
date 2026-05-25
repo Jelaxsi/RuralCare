@@ -1,7 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppFooter } from "@/components/AppFooter";
+import { AppHeader } from "@/components/AppHeader";
+import { DisclaimerBanner } from "@/components/DisclaimerBanner";
+import { ErrorCard } from "@/components/ErrorCard";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { MicSoundWave } from "@/components/SoundWaveVisualizer";
 import { SystemStatus } from "@/components/SystemStatus";
@@ -16,6 +19,9 @@ import {
   resolveEffectiveGroqLanguage,
 } from "@/lib/i18n/speech-lang";
 import { getTranslations } from "@/lib/i18n/translations";
+import { emptyStreamingResult } from "@/lib/triage/stream-parse";
+import { streamTriageAnalysis } from "@/lib/triage/stream-client";
+import { playSpokenSummary, prewarmTts, speechRateForPriority } from "@/lib/tts/speech";
 import type { TriageResult } from "@/lib/types";
 
 async function resolveAddress(lat: number, lng: number): Promise<string | null> {
@@ -85,10 +91,13 @@ export default function TriagePage() {
   const [highlightManualInput, setHighlightManualInput] = useState(false);
   const [sttBackend, setSttBackend] = useState<"valsea" | "webspeech" | null>(null);
 
-  const [analyzing, setAnalyzing] = useState(false);
+  const [streaming, setStreaming] = useState(false);
+  const [streamPreview, setStreamPreview] = useState<TriageResult | null>(null);
+  const [earlyTtsPlayed, setEarlyTtsPlayed] = useState(false);
   const [result, setResult] = useState<TriageResult | null>(null);
   const [resultTimestamp, setResultTimestamp] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [retryAnalyze, setRetryAnalyze] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -102,6 +111,7 @@ export default function TriagePage() {
   const intentionalStopRef = useRef(false);
   const langSwapRef = useRef(false);
   const prevLanguageRef = useRef(language);
+  const streamPriorityRef = useRef<TriageResult["priority"]>("P3");
 
   // ─── KEY FIX: store valseaLanguage (full word) not translationKey ───────────
   // valseaLanguage is "tamil", "sinhala", "hindi" etc. — exactly what Valsea needs.
@@ -136,10 +146,12 @@ export default function TriagePage() {
     setFinalTranscript("");
     setInterimTranscript("");
     setResult(null);
+    setStreamPreview(null);
+    setStreaming(false);
+    setEarlyTtsPlayed(false);
     setResultTimestamp("");
     setSaveState("idle");
     setLastError(null);
-    setAnalyzing(false);
   }, []);
 
   const stopValsea = useCallback(() => {
@@ -489,6 +501,7 @@ export default function TriagePage() {
 
     intentionalStopRef.current = false;
     prevLanguageRef.current = language;
+    prewarmTts(getSpeechCode(language));
 
     const apiKey = process.env.NEXT_PUBLIC_VALSEA_API_KEY?.trim();
     if (apiKey) {
@@ -573,41 +586,53 @@ export default function TriagePage() {
       return;
     }
 
-    setAnalyzing(true);
+    setLastError(null);
+    setStreaming(true);
+    setResult(null);
+    setStreamPreview(emptyStreamingResult());
+    setEarlyTtsPlayed(false);
+    setResultTimestamp(new Date().toISOString());
+    streamPriorityRef.current = "P3";
 
     const effectiveLanguage = resolveEffectiveGroqLanguage(language, transcriptBody);
+    const speechCode = getSpeechCode(language);
 
-    try {
-      const res = await fetch("/api/triage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-        body: JSON.stringify({
-          name: patientName,
-          age,
-          gender,
-          location: patientLocation,
-          chiefComplaint,
-          patientId: patientId || undefined,
-          language: effectiveLanguage,
-          transcript: transcriptBody,
-          persist: false,
-        }),
-      });
-
-      const data = (await res.json()) as TriageResult & { error?: string };
-
-      if (!res.ok) {
-        setLastError(data.error ?? "Analysis failed");
-        return;
-      }
-
-      setResult(data);
-      setResultTimestamp(new Date().toISOString());
-    } catch {
-      setLastError("Network error during analysis");
-    } finally {
-      setAnalyzing(false);
-    }
+    await streamTriageAnalysis(
+      {
+        name: patientName,
+        age,
+        gender,
+        location: patientLocation,
+        chiefComplaint,
+        patientId: patientId || undefined,
+        language: effectiveLanguage,
+        transcript: transcriptBody,
+      },
+      {
+        onDelta: (_buffer, partial) => {
+          streamPriorityRef.current = partial.priority;
+          setStreamPreview(partial);
+        },
+        onFirstSentence: (sentence) => {
+          setEarlyTtsPlayed(true);
+          void playSpokenSummary({
+            text: sentence.trim().substring(0, 100) || "Assessment complete",
+            speechCode,
+            speed: speechRateForPriority(streamPriorityRef.current),
+          });
+        },
+        onDone: (finalResult) => {
+          setResult(finalResult);
+          setStreamPreview(null);
+          setStreaming(false);
+        },
+        onError: () => {
+          setLastError(t.errorGeneric);
+          setStreamPreview(null);
+          setStreaming(false);
+        },
+      },
+    );
   }, [
     age,
     chiefComplaint,
@@ -620,7 +645,14 @@ export default function TriagePage() {
     patientLocation,
     patientName,
     stopRecognition,
+    t.errorGeneric,
   ]);
+
+  useEffect(() => {
+    if (!retryAnalyze || !transcriptFull.trim()) return;
+    setRetryAnalyze(false);
+    void stopAndAnalyze();
+  }, [retryAnalyze, transcriptFull, stopAndAnalyze]);
 
   const saveCase = useCallback(async () => {
     if (!result) return;
@@ -672,7 +704,9 @@ export default function TriagePage() {
     setCoords(null);
     setMicError(null);
     setHighlightManualInput(false);
+    setLastError(null);
     setPatientId(createClientPatientId());
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [resetSession, stopRecognition]);
 
   useEffect(() => {
@@ -688,44 +722,33 @@ export default function TriagePage() {
   }, [stopValsea]);
 
   const hasSpeech = Boolean(finalTranscript || interimTranscript);
+  const displayResult = result ?? streamPreview;
+  const showResults = Boolean(displayResult);
 
   return (
-    <div className="min-h-screen bg-deep">
-      {/* Fixed navbar */}
-      <header className="app-nav">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between">
-          <div className="flex items-center">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500">
-              <span className="text-lg font-bold text-white">+</span>
-            </div>
-            <div className="ml-2">
-              <p className="text-base font-semibold text-white">RuralCare</p>
-              <p className="hidden text-xs text-white/40 sm:block">{t.brandSubtitle}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+    <div className="min-h-screen bg-deep page-fade-in">
+      <AppHeader
+        subtitle={t.brandSubtitle}
+        dashboardLabel={t.dashboard}
+        right={
+          <>
             <LanguageSelector value={language} onChange={setLanguage} />
             <SystemStatus translationLang={languageOption.translationKey} />
-            <Link
-              href="/dashboard"
-              className="hidden rounded-lg border border-white/10 px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/5 sm:inline-flex"
-            >
-              {t.dashboard}
-            </Link>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <main className="mx-auto max-w-3xl pb-10">
-        {!result && !analyzing && (
+        {!showResults && (
           <>
-            {/* Hero */}
             <section className="hero-section">
               <h1 className="hero-title">{t.title}</h1>
               <p className="mx-auto max-w-md text-base text-white/50">{t.subtitle}</p>
             </section>
 
-            {/* Patient form */}
+            <div className="mx-4 mb-6">
+              <DisclaimerBanner text={t.disclaimerLanding} />
+            </div>
             <section className="form-card mb-6" aria-labelledby="intake-heading">
               <p id="intake-heading" className="mb-4 text-xs font-semibold uppercase tracking-widest text-violet-400/80">
                 {t.patientDetails}
@@ -830,7 +853,8 @@ export default function TriagePage() {
                   <button
                     type="button"
                     onClick={() => void stopAndAnalyze()}
-                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-8 py-2.5 text-sm font-semibold text-gray-900 transition hover:bg-white/90"
+                    disabled={streaming}
+                    className="btn-touch mt-4 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3 text-sm font-semibold text-gray-900 transition hover:bg-white/90 disabled:opacity-50"
                   >
                     <StopIcon />
                     {t.stopBtn}
@@ -842,7 +866,8 @@ export default function TriagePage() {
                 <button
                   type="button"
                   onClick={() => void stopAndAnalyze()}
-                  className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-2.5 text-sm font-semibold text-gray-900 transition hover:bg-white/90"
+                  disabled={streaming}
+                  className="btn-touch inline-flex items-center gap-2 rounded-full bg-white px-8 py-3 text-sm font-semibold text-gray-900 transition hover:bg-white/90 disabled:opacity-50"
                 >
                   <StopIcon />
                   {t.stopBtn}
@@ -904,71 +929,54 @@ export default function TriagePage() {
           </>
         )}
 
-        {/* Processing */}
-        {analyzing && (
-          <section className="flex flex-col items-center px-4 py-20" aria-live="polite">
-            <div className="relative flex h-[88px] w-[88px] items-center justify-center">
-              <span className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-violet-500 border-r-cyan-400" />
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-violet-600/20">
-                <SparkleIcon />
-              </div>
-            </div>
-            <p className="mt-6 flex items-center gap-2 text-base font-medium text-white/80">
-              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-              {t.analyzing}
-            </p>
-            <div className="mt-8 w-full space-y-3">
-              <div className="skeleton h-28 w-full" />
-              <div className="skeleton h-20 w-full" />
-              <div className="skeleton h-32 w-full" />
-            </div>
-          </section>
-        )}
-
-        {/* Results */}
-        {result && !analyzing && (
+        {showResults && displayResult && (
           <>
             <div className="pt-[calc(64px+16px)]">
               <TriageResults
-                result={result}
+                result={displayResult}
                 t={t}
                 patientId={patientId || "--------"}
+                patientName={patientName}
+                age={age}
+                transcript={transcriptFull}
                 location={patientLocation}
                 lat={coords?.lat ?? null}
                 lng={coords?.lng ?? null}
                 languageOption={languageOption}
                 timestamp={resultTimestamp}
+                onNewAssessment={newTriage}
+                isStreaming={streaming}
+                suppressAutoSpeak={earlyTtsPlayed}
               />
             </div>
-            <div className="no-print mx-4 mt-4 flex gap-3 pb-8">
+            {result && !streaming && (
+            <div className="no-print mx-4 mt-4 flex flex-col gap-3 pb-4 sm:flex-row">
               <button
                 type="button"
                 onClick={() => void saveCase()}
                 disabled={saveState !== "idle"}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-600 py-3 font-medium text-white transition hover:bg-violet-500 disabled:opacity-50"
+                className="btn-touch flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-600 py-3 font-medium text-white transition hover:bg-violet-500 disabled:opacity-50"
               >
                 {saveState === "saved" ? t.caseSaved : saveState === "saving" ? t.saving : t.saveCase}
               </button>
-              <button
-                type="button"
-                onClick={newTriage}
-                className="flex flex-1 rounded-xl border border-white/10 bg-white/5 py-3 font-medium text-white/70 transition hover:bg-white/10"
-              >
-                {t.newTriage}
-              </button>
             </div>
+            )}
           </>
         )}
 
-        {lastError && (
-          <div
-            role="alert"
-            className="mx-4 mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
-          >
-            {lastError}
-          </div>
+        {lastError && !streaming && !showResults && (
+          <ErrorCard
+            message={lastError}
+            tryAgainLabel={t.tryAgain}
+            onRetry={() => {
+              setLastError(null);
+              setRetryAnalyze(true);
+            }}
+          />
         )}
       </main>
+
+      <AppFooter text={t.footerText} />
     </div>
   );
 }
@@ -995,14 +1003,6 @@ function StopIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <rect x="6" y="6" width="12" height="12" rx="1" />
-    </svg>
-  );
-}
-
-function SparkleIcon() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400" aria-hidden>
-      <path d="M12 3l1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5L12 3z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
