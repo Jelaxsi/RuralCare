@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { addCase, deleteCase, readCases, updateCases } from "@/lib/cases/storage";
 import { hospitalConfig } from "@/lib/hospital/config";
+import { resolveEffectiveGroqLanguageFromInput } from "@/lib/i18n/speech-lang";
 import { analyzeWithGroq } from "@/lib/triage/groq";
 import { checkRateLimit, getClientIp } from "@/lib/triage/rate-limit";
 import { validateTriageInput } from "@/lib/triage/validation";
@@ -96,12 +97,16 @@ export async function POST(req: Request) {
     if (persist && body.triageResult && body.triageResult.priority) {
       triage = body.triageResult;
     } else {
+      const groqLanguage = resolveEffectiveGroqLanguageFromInput(
+        input.language,
+        input.transcript,
+      );
       const analysis = await analyzeWithGroq({
         name: input.name,
         age: input.age,
         gender: input.gender,
         location: input.location,
-        language: input.language,
+        language: groqLanguage,
         transcript: input.transcript,
       });
       triage = analysis.result;

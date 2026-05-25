@@ -8,9 +8,8 @@ export async function GET() {
     status: hasGroq ? "online" : "offline",
     services: {
       triage: hasGroq ? "online" : "offline",
-      stt: "browser",
-      storage: hasKv ? "online" : "local",
-      tts: process.env.NEXT_PUBLIC_VALSEA_API_KEY ? "valsea" : "browser",
+      tts: process.env.OPENAI_API_KEY ? "openai" : "browser",
+      stt: process.env.NEXT_PUBLIC_VALSEA_API_KEY ? "valsea" : "browser",
     },
     timestamp: new Date().toISOString(),
   });

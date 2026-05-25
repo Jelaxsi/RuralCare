@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { LanguageOption } from "@/lib/i18n/languages";
+import { translateEstimatedTimeToCare } from "@/lib/i18n/time-to-care";
 import type { TranslationKeys } from "@/lib/i18n/translations";
 import {
   buildSpokenSummary,
-  getTtsLanguageCodes,
   playSpokenSummary,
   speechRateForPriority,
 } from "@/lib/tts/speech";
@@ -60,9 +60,12 @@ export function TriageResults({
   const [speaking, setSpeaking] = useState(false);
   const [delivered, setDelivered] = useState(false);
   const [needsTap, setNeedsTap] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const spokenText = buildSpokenSummary(result, t.callEmergency);
-  const ttsCodes = getTtsLanguageCodes(languageOption.translationKey);
+  const spokenText = buildSpokenSummary(result, t);
+  const speechCode = languageOption.speechCode;
+  const translatedTime = translateEstimatedTimeToCare(
+    languageOption.translationKey,
+    result.estimated_time_to_care,
+  );
   const printRef = useRef<HTMLDivElement>(null);
   const timePulsing = result.estimated_time_to_care === "immediately";
   let cardIndex = 0;
@@ -78,36 +81,26 @@ export function TriageResults({
     setDelivered(false);
     setNeedsTap(false);
 
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
     }
 
     try {
-      const playback = await playSpokenSummary({
+      await playSpokenSummary({
         text: spokenText,
-        valseaLanguage: ttsCodes.valseaLanguage,
-        speechCode: ttsCodes.speechCode,
+        speechCode,
         speed: speechRateForPriority(result.priority),
       });
 
-      if (playback.audio) {
-        audioRef.current = playback.audio;
-        playback.audio.onended = () => {
-          setSpeaking(false);
-          setDelivered(true);
-        };
-      } else {
-        window.setTimeout(() => {
-          setSpeaking(false);
-          setDelivered(true);
-        }, spokenText.length * 45);
-      }
+      window.setTimeout(() => {
+        setSpeaking(false);
+        setDelivered(true);
+      }, spokenText.length * 45);
     } catch {
       setNeedsTap(true);
       setSpeaking(false);
     }
-  }, [muted, result.priority, spokenText, ttsCodes.speechCode, ttsCodes.valseaLanguage]);
+  }, [muted, result.priority, spokenText, speechCode]);
 
   useEffect(() => {
     if (muted) return;
@@ -121,8 +114,8 @@ export function TriageResults({
     const next = !muted;
     setMuted(next);
     localStorage.setItem("ruralcare-audio-muted", String(next));
-    if (next && audioRef.current) {
-      audioRef.current.pause();
+    if (next && typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
       setSpeaking(false);
     }
   }
@@ -176,7 +169,7 @@ export function TriageResults({
                     : "border-white/10 bg-white/5 text-white/60"
                 }`}
               >
-                {t.estimatedTime}: {result.estimated_time_to_care}
+                {t.estimatedTime}: {translatedTime}
               </span>
               <button
                 type="button"

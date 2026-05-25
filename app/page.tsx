@@ -7,10 +7,14 @@ import { MicSoundWave } from "@/components/SoundWaveVisualizer";
 import { SystemStatus } from "@/components/SystemStatus";
 import { TriageResults } from "@/components/TriageResults";
 import {
-  getLanguageLabel,
   getLanguageOption,
   type LanguageCode,
 } from "@/lib/i18n/languages";
+import {
+  GROQ_LANGUAGE_LABELS,
+  getSpeechCode,
+  resolveEffectiveGroqLanguage,
+} from "@/lib/i18n/speech-lang";
 import { getTranslations } from "@/lib/i18n/translations";
 import type { TriageResult } from "@/lib/types";
 
@@ -77,6 +81,9 @@ export default function TriagePage() {
   const [interimTranscript, setInterimTranscript] = useState("");
   const [manualSymptoms, setManualSymptoms] = useState("");
   const [lastError, setLastError] = useState<string | null>(null);
+  const [micError, setMicError] = useState<string | null>(null);
+  const [highlightManualInput, setHighlightManualInput] = useState(false);
+  const [sttBackend, setSttBackend] = useState<"valsea" | "webspeech" | null>(null);
 
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<TriageResult | null>(null);
@@ -84,8 +91,37 @@ export default function TriagePage() {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const sttBackendRef = useRef<"valsea" | "webspeech" | null>(null);
   const isRecordingRef = useRef(false);
+  const audioStreamingRef = useRef(false);
   const intentionalStopRef = useRef(false);
+  const langSwapRef = useRef(false);
+  const prevLanguageRef = useRef(language);
+
+  // ─── KEY FIX: store valseaLanguage (full word) not translationKey ───────────
+  // valseaLanguage is "tamil", "sinhala", "hindi" etc. — exactly what Valsea needs.
+  // translationKey was "tamil", "sinhala" etc. too, but valseaLanguage is the
+  // authoritative field from languages.ts and handles edge cases (e.g. urdu → english).
+  const valseaLanguageRef = useRef(languageOption.valseaLanguage);
+
+  useEffect(() => {
+    valseaLanguageRef.current = getLanguageOption(language).valseaLanguage;
+    console.log(
+      "[Lang] Language changed:",
+      language,
+      "→ Valsea language:",
+      valseaLanguageRef.current,
+    );
+  }, [language]);
+
+  useEffect(() => {
+    isRecordingRef.current = recording;
+  }, [recording]);
 
   useEffect(() => {
     setPatientId(createClientPatientId());
@@ -106,16 +142,114 @@ export default function TriagePage() {
     setAnalyzing(false);
   }, []);
 
+  const stopValsea = useCallback(() => {
+    isRecordingRef.current = false;
+    audioStreamingRef.current = false;
+    setRecording(false);
+    setInterimTranscript("");
+
+    if (processorRef.current) {
+      processorRef.current.onaudioprocess = null;
+      try {
+        processorRef.current.disconnect();
+      } catch {
+        /* noop */
+      }
+      processorRef.current = null;
+    }
+
+    try {
+      sourceRef.current?.disconnect();
+    } catch {
+      /* noop */
+    }
+    sourceRef.current = null;
+
+    if (wsRef.current) {
+      if (wsRef.current.readyState === WebSocket.OPEN) {
+        try {
+          wsRef.current.send(JSON.stringify({ type: "session.stop" }));
+        } catch (e) {
+          console.warn("[Valsea] Could not send session.stop:", e);
+        }
+        wsRef.current.close(1000, "User stopped recording");
+      }
+      wsRef.current = null;
+    }
+
+    if (audioContextRef.current) {
+      void audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
   const stopRecognition = useCallback(() => {
     intentionalStopRef.current = true;
-    isRecordingRef.current = false;
-    setRecording(false);
+    stopValsea();
+
     try {
       recognitionRef.current?.stop();
     } catch {
       /* noop */
     }
-  }, []);
+
+    sttBackendRef.current = null;
+    setSttBackend(null);
+  }, [stopValsea]);
+
+  const bindRecognitionHandlers = useCallback(
+    (recognition: SpeechRecognitionInstance) => {
+      recognition.onresult = (event) => {
+        let interim = "";
+        let final = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0]?.transcript ?? "";
+          if (event.results[i].isFinal) final += transcript;
+          else interim += transcript;
+        }
+        if (final) setFinalTranscript((prev) => prev + final);
+        setInterimTranscript(interim);
+      };
+
+      recognition.onerror = (event) => {
+        console.log("Speech error:", event.error);
+        if (event.error === "language-not-supported") {
+          setHighlightManualInput(true);
+          setMicError(t.voiceNotSupported);
+          stopRecognition();
+        } else if (event.error === "no-speech") {
+          if (isRecordingRef.current && !langSwapRef.current) {
+            try {
+              recognition.start();
+            } catch {
+              /* already running */
+            }
+          }
+        } else if (event.error === "not-allowed") {
+          setMicError(t.micAccessDenied);
+          stopRecognition();
+        } else if (event.error === "aborted") {
+          /* ignore */
+        }
+      };
+
+      recognition.onend = () => {
+        if (isRecordingRef.current && !intentionalStopRef.current && !langSwapRef.current) {
+          try {
+            recognition.start();
+          } catch {
+            /* noop */
+          }
+        }
+      };
+    },
+    [stopRecognition, t.micAccessDenied, t.voiceNotSupported],
+  );
 
   const detectLocation = useCallback(async () => {
     if (!navigator.geolocation) {
@@ -138,74 +272,297 @@ export default function TriagePage() {
     );
   }, [t.locationDenied]);
 
-  const startRecording = useCallback(() => {
-    resetSession();
-    setLastError(null);
-    setFinalTranscript("");
-    setInterimTranscript("");
+  const startValsea = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      });
 
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      const source = audioContext.createMediaStreamSource(stream);
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+      audioContextRef.current = audioContext;
+      streamRef.current = stream;
+      sourceRef.current = source;
+      processorRef.current = processor;
+
+      const apiKey = process.env.NEXT_PUBLIC_VALSEA_API_KEY?.trim();
+      if (!apiKey) {
+        throw new Error("Missing NEXT_PUBLIC_VALSEA_API_KEY");
+      }
+
+      // Single WebSocket — API key in query param (browsers cannot set WS headers)
+      const ws = new WebSocket(`wss://api.valsea.ai/v1/realtime?api_key=${apiKey}`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log("[Valsea] WebSocket connected");
+        // Do NOT send session.start here — wait for session.created event
+      };
+
+      ws.onmessage = (event) => {
+        let msg: { type?: string; text?: string; message?: string };
+        try {
+          msg = JSON.parse(String(event.data)) as {
+            type?: string;
+            text?: string;
+            message?: string;
+          };
+        } catch {
+          console.error("[Valsea] Failed to parse message:", event.data);
+          return;
+        }
+
+        console.log("[Valsea] Event:", msg.type, msg);
+
+        switch (msg.type) {
+          case "session.created": {
+            // ─── THE FIX: read valseaLanguage from ref (never stale) ──────────
+            // valseaLanguage is the exact full-word string Valsea STT expects:
+            //   "tamil", "sinhala", "hindi", "malayalam", etc.
+            // It is set in languages.ts on each LanguageOption and kept in sync
+            // via valseaLanguageRef whenever the user changes language.
+            const valseaLang = valseaLanguageRef.current;
+            console.log("[Valsea] Sending session.start with language:", valseaLang);
+
+            ws.send(
+              JSON.stringify({
+                type: "session.start",
+                model: "valsea-rtt",
+                language: valseaLang,
+                enable_correction: true,
+                hint_text: "medical symptoms emergency health pain fever doctor hospital",
+              }),
+            );
+            break;
+          }
+
+          case "session.ready": {
+            console.log("[Valsea] Session ready — starting audio stream");
+            isRecordingRef.current = true;
+            audioStreamingRef.current = true;
+            setRecording(true);
+
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+
+            processor.onaudioprocess = (e: AudioProcessingEvent) => {
+              if (!isRecordingRef.current || !audioStreamingRef.current) return;
+              if (ws.readyState !== WebSocket.OPEN) return;
+
+              const float32 = e.inputBuffer.getChannelData(0);
+              const int16 = new Int16Array(float32.length);
+              for (let i = 0; i < float32.length; i++) {
+                const clamped = Math.max(-1, Math.min(1, float32[i]));
+                int16[i] = clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff;
+              }
+
+              const uint8 = new Uint8Array(int16.buffer);
+              let binary = "";
+              for (let i = 0; i < uint8.length; i++) {
+                binary += String.fromCharCode(uint8[i]);
+              }
+              const base64Audio = btoa(binary);
+
+              ws.send(
+                JSON.stringify({
+                  type: "audio.append",
+                  audio: base64Audio,
+                }),
+              );
+            };
+            break;
+          }
+
+          case "transcript.partial": {
+            setInterimTranscript(msg.text ?? "");
+            break;
+          }
+
+          case "transcript.final": {
+            const finalText = msg.text ?? "";
+            if (finalText.trim()) {
+              setFinalTranscript((prev) => (prev ? `${prev} ${finalText}` : finalText));
+            }
+            setInterimTranscript("");
+            break;
+          }
+
+          case "error": {
+            console.error("[Valsea] Error event:", msg);
+            setMicError(`Voice recognition error: ${msg.message ?? "Unknown error"}`);
+            stopValsea();
+            break;
+          }
+
+          default: {
+            console.log("[Valsea] Unhandled event type:", msg.type);
+          }
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error("[Valsea] WebSocket error:", error);
+        setMicError("Connection failed. Check your internet and try again.");
+        stopValsea();
+      };
+
+      ws.onclose = (event) => {
+        console.log("[Valsea] Closed — code:", event.code, "reason:", event.reason);
+        isRecordingRef.current = false;
+        audioStreamingRef.current = false;
+        setRecording(false);
+
+        if (event.code === 1008 || event.code === 4001 || event.code === 4003) {
+          setMicError("Authentication failed. Please check API key.");
+        } else if (!intentionalStopRef.current && sttBackendRef.current === "valsea") {
+          setMicError("Voice connection closed. Type symptoms manually or try again.");
+          setHighlightManualInput(true);
+        }
+      };
+    } catch (err: unknown) {
+      console.error("[Valsea] Setup error:", err);
+      stopValsea();
+
+      if (err instanceof DOMException) {
+        if (err.name === "NotAllowedError") {
+          setMicError("Microphone access denied. Please allow microphone in browser settings.");
+          return;
+        }
+        if (err.name === "NotFoundError") {
+          setMicError("No microphone found. Please connect a microphone.");
+          return;
+        }
+      }
+
+      setMicError("Could not start voice recording. Please try again.");
+      throw err;
+    }
+  }, [stopValsea]);
+
+  const startWebSpeech = useCallback(() => {
     const Ctor = getSpeechRecognitionCtor();
     if (!Ctor) {
-      setLastError("Web Speech API is not available. Please use Chrome or type symptoms manually.");
+      setMicError("Web Speech API is not available. Please use Chrome or type symptoms manually.");
+      setHighlightManualInput(true);
+      isRecordingRef.current = false;
+      setRecording(false);
       return;
     }
 
-    intentionalStopRef.current = false;
-    isRecordingRef.current = true;
-    setRecording(true);
+    sttBackendRef.current = "webspeech";
+    setSttBackend("webspeech");
 
     try {
       const recognition = new Ctor();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = languageOption.speechCode;
+      recognition.lang = getSpeechCode(language);
 
-      recognition.onresult = (event) => {
-        let interim = "";
-        let final = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0]?.transcript ?? "";
-          if (event.results[i].isFinal) final += transcript;
-          else interim += transcript;
-        }
-        if (final) setFinalTranscript((prev) => prev + final);
-        setInterimTranscript(interim);
-      };
-
-      recognition.onerror = (event) => {
-        if (event.error === "no-speech" && isRecordingRef.current) {
-          try {
-            recognition.start();
-          } catch {
-            /* already running */
-          }
-          return;
-        }
-        if (event.error === "aborted") return;
-        if (event.error === "not-allowed") {
-          setLastError("Microphone permission denied. Please allow access or type symptoms manually.");
-          stopRecognition();
-        }
-      };
-
-      recognition.onend = () => {
-        if (isRecordingRef.current && !intentionalStopRef.current) {
-          try {
-            recognition.start();
-          } catch {
-            /* noop */
-          }
-        }
-      };
+      bindRecognitionHandlers(recognition);
 
       recognitionRef.current = recognition;
       recognition.start();
     } catch (e) {
       isRecordingRef.current = false;
       setRecording(false);
-      setLastError(e instanceof Error ? e.message : "Could not start microphone");
+      sttBackendRef.current = null;
+      setSttBackend(null);
+      setMicError(e instanceof Error ? e.message : "Could not start microphone");
+      setHighlightManualInput(true);
     }
-  }, [languageOption.speechCode, resetSession, stopRecognition]);
+  }, [bindRecognitionHandlers, language]);
+
+  const startRecording = useCallback(async () => {
+    resetSession();
+    setLastError(null);
+    setMicError(null);
+    setHighlightManualInput(false);
+    setFinalTranscript("");
+    setInterimTranscript("");
+
+    intentionalStopRef.current = false;
+    prevLanguageRef.current = language;
+
+    const apiKey = process.env.NEXT_PUBLIC_VALSEA_API_KEY?.trim();
+    if (apiKey) {
+      sttBackendRef.current = "valsea";
+      setSttBackend("valsea");
+      try {
+        await startValsea();
+        return;
+      } catch (err) {
+        console.error("Valsea STT failed, falling back to Web Speech:", err);
+        sttBackendRef.current = null;
+        setSttBackend(null);
+      }
+    }
+
+    isRecordingRef.current = true;
+    setRecording(true);
+    startWebSpeech();
+  }, [language, resetSession, startValsea, startWebSpeech]);
+
+  // Handle live language switching while recording
+  useEffect(() => {
+    if (!recording) {
+      prevLanguageRef.current = language;
+      return;
+    }
+    if (prevLanguageRef.current === language) return;
+
+    prevLanguageRef.current = language;
+
+    if (sttBackendRef.current === "valsea" && wsRef.current?.readyState === WebSocket.OPEN) {
+      // Send new session.start with updated language
+      audioStreamingRef.current = false;
+      const newValseaLang = getLanguageOption(language).valseaLanguage;
+      console.log("[Valsea] Live language switch — sending session.start, language:", newValseaLang);
+      wsRef.current.send(
+        JSON.stringify({
+          type: "session.start",
+          model: "valsea-rtt",
+          language: newValseaLang,
+          enable_correction: true,
+          hint_text: "medical symptoms emergency health pain fever doctor hospital",
+        }),
+      );
+      return;
+    }
+
+    if (sttBackendRef.current !== "webspeech" || !recognitionRef.current) return;
+
+    const recognition = recognitionRef.current;
+    langSwapRef.current = true;
+
+    try {
+      recognition.stop();
+    } catch {
+      /* noop */
+    }
+
+    const timer = window.setTimeout(() => {
+      if (!isRecordingRef.current || !recognitionRef.current) {
+        langSwapRef.current = false;
+        return;
+      }
+      recognitionRef.current.lang = getSpeechCode(language);
+      langSwapRef.current = false;
+      try {
+        recognitionRef.current.start();
+      } catch {
+        /* noop */
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [language, recording]);
 
   const stopAndAnalyze = useCallback(async () => {
     stopRecognition();
@@ -218,10 +575,12 @@ export default function TriagePage() {
 
     setAnalyzing(true);
 
+    const effectiveLanguage = resolveEffectiveGroqLanguage(language, transcriptBody);
+
     try {
       const res = await fetch("/api/triage", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({
           name: patientName,
           age,
@@ -229,7 +588,7 @@ export default function TriagePage() {
           location: patientLocation,
           chiefComplaint,
           patientId: patientId || undefined,
-          language: getLanguageLabel(language),
+          language: effectiveLanguage,
           transcript: transcriptBody,
           persist: false,
         }),
@@ -268,9 +627,11 @@ export default function TriagePage() {
     setSaveState("saving");
 
     try {
+      const effectiveLanguage = resolveEffectiveGroqLanguage(language, transcriptFull);
+
       const res = await fetch("/api/triage", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({
           name: patientName,
           age,
@@ -278,7 +639,7 @@ export default function TriagePage() {
           location: patientLocation,
           chiefComplaint,
           patientId: patientId || undefined,
-          language: getLanguageLabel(language),
+          language: effectiveLanguage,
           transcript: transcriptFull,
           persist: true,
           triageResult: result,
@@ -309,20 +670,22 @@ export default function TriagePage() {
     setChiefComplaint("");
     setLanguage("english");
     setCoords(null);
+    setMicError(null);
+    setHighlightManualInput(false);
     setPatientId(createClientPatientId());
   }, [resetSession, stopRecognition]);
 
   useEffect(() => {
     return () => {
       intentionalStopRef.current = true;
-      isRecordingRef.current = false;
+      stopValsea();
       try {
         recognitionRef.current?.abort();
       } catch {
         /* noop */
       }
     };
-  }, []);
+  }, [stopValsea]);
 
   const hasSpeech = Boolean(finalTranscript || interimTranscript);
 
@@ -442,7 +805,7 @@ export default function TriagePage() {
                 <div className="flex flex-col items-center">
                   <button
                     type="button"
-                    onClick={startRecording}
+                    onClick={() => void startRecording()}
                     aria-label={t.startBtn}
                     className="mic-btn-idle"
                   >
@@ -485,6 +848,11 @@ export default function TriagePage() {
                   {t.stopBtn}
                 </button>
               )}
+              {micError && (
+                <p role="alert" className="max-w-sm text-center text-xs text-amber-300/90">
+                  {micError}
+                </p>
+              )}
             </section>
 
             {/* Live transcript */}
@@ -494,7 +862,11 @@ export default function TriagePage() {
                   <MicIcon size={16} className="text-violet-400" />
                   <span className="text-sm font-medium text-white/70">{t.transcriptTitle}</span>
                 </div>
-                <span className="text-xs text-white/30">{languageOption.label}</span>
+                <span className="text-xs text-white/30">
+                  {recording
+                    ? `${t.listeningIn} ${GROQ_LANGUAGE_LABELS[languageOption.translationKey]}${sttBackend === "valsea" ? " · Valsea" : ""}`
+                    : languageOption.label}
+                </span>
               </div>
               <div className="min-h-[80px] text-sm leading-relaxed" aria-live="polite">
                 {!hasSpeech && !manualSymptoms && (
@@ -517,13 +889,16 @@ export default function TriagePage() {
               </div>
             </section>
 
-            {/* Manual input */}
-            <section className="mx-4">
+            {/* Manual input — always visible */}
+            <section className="mx-4 mb-4">
+              <p className="mb-1.5 text-xs text-white/30">{t.manualInputHint}</p>
               <textarea
                 value={manualSymptoms}
                 onChange={(e) => setManualSymptoms(e.target.value)}
                 placeholder={t.manualPlaceholder}
-                className="form-input h-20 resize-none rounded-2xl"
+                className={`form-input h-20 resize-none rounded-2xl ${
+                  highlightManualInput ? "ring-2 ring-violet-500/40" : ""
+                }`}
               />
             </section>
           </>

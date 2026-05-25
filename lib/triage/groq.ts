@@ -3,23 +3,17 @@ import type { Confidence, EstimatedTimeToCare, Priority, TriageResult } from "..
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
-const CRITICAL_MEDICAL_RULES = `CRITICAL MEDICAL RULES — NEVER VIOLATE:
-These symptom descriptions in ANY language = P1:
-- Cannot breathe / breathing difficulty / shortness of breath / chest tightness
-- Chest pain / chest pressure / heart pain
-- Left arm pain / jaw pain (cardiac signs)
-- Loss of consciousness / fainting / collapsed
-- Seizure / convulsions / fitting / shaking
-- Stroke signs: face drooping, arm weakness, speech problems, sudden confusion
-- Severe bleeding / blood not stopping
-- Throat closing / tongue swelling / anaphylaxis
-- Very high fever with stiff neck (meningitis)
-- Baby / child not breathing
+const CRITICAL_TRIAGE_RULES = `CRITICAL TRIAGE RULES — NEVER VIOLATE:
+1. ANY breathing difficulty = P1 immediately
+2. ANY chest pain or pressure = P1 immediately
+3. ANY left arm or jaw pain = P1 (cardiac)
+4. ANY loss of consciousness = P1 immediately
+5. ANY seizure or convulsion = P1 immediately
+6. ANY stroke signs (face drooping, arm weakness, slurred speech) = P1 immediately
+7. When in doubt between P2 and P1 → always choose P1
+8. A missed P1 kills. A false P1 alarm is acceptable.
 
-When a patient describes ANY of the above — even in informal language, even with speech recognition errors — ALWAYS return P1.
-The cost of missing an emergency is death.
-The cost of a false alarm is inconvenience.
-Always choose patient safety.`;
+These rules apply regardless of language used.`;
 
 const PHYSICIAN_BASE = `You are a senior emergency physician with 20 years experience in emergency medicine. You are triaging patients in rural South Asia.
 
@@ -43,35 +37,22 @@ You assess the FULL CLINICAL PICTURE:
 - Are symptoms getting worse or sudden onset?
 - Sudden onset = always more serious
 
-You respond ONLY with valid JSON.`;
+You respond ONLY with valid JSON. Keep all text fields concise.`;
 
 function buildLanguageInstruction(language: string): string {
-  const l = language.toLowerCase();
-  let scriptLine = "Use the correct native script for this language.";
-  if (l.includes("tamil")) scriptLine = "If Tamil: every field in தமிழ் script";
-  else if (l.includes("sinhala")) scriptLine = "If Sinhala: every field in සිංහල script";
-  else if (l.includes("hindi")) scriptLine = "If Hindi: every field in हिन्दी script";
-  else if (l.includes("bengali")) scriptLine = "If Bengali: every field in বাংলা script";
-  else if (l.includes("urdu")) scriptLine = "If Urdu: every field in اردو script";
-  else if (l.includes("malayalam")) scriptLine = "If Malayalam: every field in മലയാളം script";
-  else if (l.includes("telugu")) scriptLine = "If Telugu: every field in తెలుగు script";
-  else if (l.includes("kannada")) scriptLine = "If Kannada: every field in ಕನ್ನಡ script";
-  else if (l.includes("marathi")) scriptLine = "If Marathi: every field in मराठी script";
-  else if (l.includes("punjabi")) scriptLine = "If Punjabi: every field in ਪੰਜਾਬੀ script";
-  else if (l.includes("english")) scriptLine = "If English: English";
-
-  return `LANGUAGE INSTRUCTION — THIS IS MANDATORY:
-The patient has selected: ${language}
-You MUST write EVERY text field in the JSON response in the ${language} language and script.
-${scriptLine}
-clinical_reasoning must remain in English for medical staff.
-This is non-negotiable. Do not respond in English if the patient selected another language.`;
+  return `MANDATORY LANGUAGE RULE: You MUST write ALL text fields in ${language} language and script.
+If language is "tamil": write in தமிழ் script only.
+If language is "sinhala": write in සිංහල script only.
+If language is "hindi": write in हिन्दी script only.
+If language is "english": write in English only.
+This rule overrides everything else.
+Never write in English if language is not english.`;
 }
 
 function buildSystemPrompt(language: string): string {
   return `${buildLanguageInstruction(language)}
 
-${CRITICAL_MEDICAL_RULES}
+${CRITICAL_TRIAGE_RULES}
 
 ${PHYSICIAN_BASE}`;
 }
@@ -89,12 +70,11 @@ const FALLBACK: TriageResult = {
     "Rest and stay hydrated",
     "Monitor symptoms closely for the next few hours",
     "Seek medical advice if symptoms persist or worsen",
-    "Return for re-triage if new symptoms develop",
   ],
   call_emergency: false,
   emergency_number: null,
   warning_signs: ["Sudden worsening of symptoms", "Difficulty breathing or chest pain"],
-  do_not_do: ["Ignore rapidly worsening symptoms", "Self-medicate without professional advice"],
+  do_not_do: ["Ignore rapidly worsening symptoms"],
   estimated_time_to_care: "within 24 hours",
   follow_up: "Visit a clinic or pharmacy if symptoms do not improve within 24 hours.",
   medications_to_avoid: [],
@@ -111,9 +91,10 @@ function buildUserMessage(params: {
 }): string {
   const { name, age, gender, location, language, transcript } = params;
 
-  return `REMINDER — Patient language is ${language}. Write ALL patient-facing text fields in ${language}. clinical_reasoning in English only.
+  return `RESPOND IN ${language.toUpperCase()} LANGUAGE ONLY.
+Every text field must be in ${language} script.
 
-You are assessing this patient right now in the emergency department. Make your triage decision.
+Patient symptoms: ${transcript}
 
 Patient details:
 - Name: ${name || "Unknown"}
@@ -121,29 +102,21 @@ Patient details:
 - Gender: ${gender || "Unknown"}
 - Location: ${location || "Unknown"}
 - Language: ${language}
-- Symptoms as described: ${transcript}
 
-Respond with this exact JSON:
+Respond with this exact JSON only:
 {
   "priority": "P1" or "P2" or "P3",
-  "likely_condition": "condition in patient language",
+  "likely_condition": "condition name in patient language",
   "confidence": "high" or "medium" or "low",
-  "clinical_reasoning": "why you chose this priority — in English for medical staff",
   "reason": "one sentence in patient language",
-  "what_is_happening": "2-3 sentences plain language in patient language — no medical jargon",
-  "immediate_actions": [
-    "action 1 in patient language",
-    "action 2 in patient language",
-    "action 3 in patient language",
-    "action 4 in patient language"
-  ],
+  "what_is_happening": "2 sentences max in patient language",
+  "immediate_actions": ["action 1", "action 2", "action 3"],
   "call_emergency": true or false,
-  "emergency_number": "1990" or "119" or null,
-  "warning_signs": ["sign in patient language"],
-  "do_not_do": ["instruction in patient language"],
+  "emergency_number": "1990" or null,
+  "warning_signs": ["sign 1", "sign 2"],
+  "do_not_do": ["item 1"],
   "estimated_time_to_care": "immediately" or "within 1 hour" or "within 4 hours" or "within 24 hours",
-  "specialist_needed": "type or null",
-  "follow_up": "follow up instruction in patient language"
+  "follow_up": "one sentence in patient language"
 }
 
 Use your full medical knowledge to assess this patient.
@@ -190,15 +163,15 @@ function normalizeResult(parsed: Record<string, unknown>): TriageResult {
         ? "1990"
         : null;
 
+  const reason = String(parsed.reason ?? "Triage assessment completed.");
+
   return {
     priority,
     likely_condition: String(parsed.likely_condition ?? "General symptom review"),
-    icd_code: parsed.icd_code ? String(parsed.icd_code) : null,
+    icd_code: null,
     confidence,
-    clinical_reasoning: String(
-      parsed.clinical_reasoning ?? parsed.reason ?? "Triage assessment completed.",
-    ),
-    reason: String(parsed.reason ?? "Triage assessment completed."),
+    clinical_reasoning: reason,
+    reason,
     what_is_happening: String(
       parsed.what_is_happening ?? "Your symptoms have been assessed. Follow the guidance below.",
     ),
@@ -213,13 +186,8 @@ function normalizeResult(parsed: Record<string, unknown>): TriageResult {
     do_not_do: Array.isArray(parsed.do_not_do) ? parsed.do_not_do.map(String) : FALLBACK.do_not_do,
     estimated_time_to_care: estimated,
     follow_up: String(parsed.follow_up ?? FALLBACK.follow_up),
-    medications_to_avoid: Array.isArray(parsed.medications_to_avoid)
-      ? parsed.medications_to_avoid.map(String)
-      : [],
-    specialist_needed:
-      parsed.specialist_needed && String(parsed.specialist_needed) !== "null"
-        ? String(parsed.specialist_needed)
-        : null,
+    medications_to_avoid: [],
+    specialist_needed: null,
   };
 }
 
@@ -232,8 +200,9 @@ async function callGroqOnce(
   const response = await client.chat.completions.create(
     {
       model: GROQ_MODEL,
-      max_tokens: 1500,
+      max_tokens: 2048,
       temperature: 0.05,
+      response_format: { type: "json_object" },
       messages: [
         { role: "system", content: buildSystemPrompt(language) },
         { role: "user", content: userMessage },
@@ -267,7 +236,7 @@ export async function analyzeWithGroq(params: {
     return { result: FALLBACK, durationMs: 0 };
   }
 
-  const client = new Groq({ apiKey, baseURL: "https://api.groq.com/openai/v1" });
+  const client = new Groq({ apiKey });
   const userMessage = buildUserMessage(params);
 
   const start = Date.now();
