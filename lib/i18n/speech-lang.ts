@@ -1,5 +1,5 @@
 import type { LanguageCode, TranslationLanguage } from "./languages";
-import { getLanguageLabel, getLanguageOption } from "./languages";
+import { getLanguageLabel, getLanguageOption, LANGUAGE_OPTIONS } from "./languages";
 
 /** Web Speech API BCP-47 codes — ta-IN for all Tamil (Chrome support). */
 export const SPEECH_LANG_MAP: Record<TranslationLanguage, string> = {
@@ -55,6 +55,23 @@ export function getValseaSttLanguage(code: LanguageCode): string {
   return VALSEA_STT_LANG_MAP[option.translationKey] ?? "english";
 }
 
+function valseaLanguageForTranslationKey(key: TranslationLanguage): string {
+  return LANGUAGE_OPTIONS.find((o) => o.translationKey === key)?.valseaLanguage ?? key;
+}
+
+/** Normalize client language label/code to Groq prompt language (e.g. "Tamil" → "tamil"). */
+export function normalizeGroqLanguageInput(language: string): string {
+  const trimmed = language.trim().toLowerCase();
+  const entry = LANGUAGE_OPTIONS.find(
+    (o) =>
+      o.valseaLanguage === trimmed ||
+      o.translationKey === trimmed ||
+      o.label.toLowerCase() === trimmed,
+  );
+  if (entry) return entry.valseaLanguage;
+  return trimmed.split(/[\s(/]/)[0] || "english";
+}
+
 const TAMIL_PATTERN = /[\u0B80-\u0BFF]/;
 const SINHALA_PATTERN = /[\u0D80-\u0DFF]/;
 const BENGALI_PATTERN = /[\u0980-\u09FF]/;
@@ -90,24 +107,25 @@ export function resolveEffectiveGroqLanguage(
   const detected = detectLanguageFromScript(transcript);
 
   if (option.translationKey === "english" && detected) {
-    return GROQ_LANGUAGE_LABELS[detected];
+    return valseaLanguageForTranslationKey(detected);
   }
 
   if (detected === "hindi" && option.translationKey === "marathi") {
-    return GROQ_LANGUAGE_LABELS.marathi;
+    return "marathi";
   }
 
-  return GROQ_LANGUAGE_LABELS[option.translationKey] ?? getLanguageLabel(selectedCode);
+  return option.valseaLanguage;
 }
 
-/** Server-side: language label from client + raw transcript script detection. */
+/** Server-side: language from client + raw transcript script detection. */
 export function resolveEffectiveGroqLanguageFromInput(
   selectedLanguageLabel: string,
   transcript: string,
 ): string {
+  const normalized = normalizeGroqLanguageInput(selectedLanguageLabel);
   const detected = detectLanguageFromScript(transcript);
-  if (detected && /^english$/i.test(selectedLanguageLabel.trim())) {
-    return GROQ_LANGUAGE_LABELS[detected];
+  if (detected && normalized === "english") {
+    return valseaLanguageForTranslationKey(detected);
   }
-  return selectedLanguageLabel;
+  return normalized;
 }

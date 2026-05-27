@@ -5,6 +5,7 @@ import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
 import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import { ErrorCard } from "@/components/ErrorCard";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { MicSoundWave } from "@/components/SoundWaveVisualizer";
 import { SystemStatus } from "@/components/SystemStatus";
@@ -16,12 +17,11 @@ import {
 import {
   GROQ_LANGUAGE_LABELS,
   getSpeechCode,
-  resolveEffectiveGroqLanguage,
 } from "@/lib/i18n/speech-lang";
 import { getTranslations } from "@/lib/i18n/translations";
 import { emptyStreamingResult } from "@/lib/triage/stream-parse";
 import { streamTriageAnalysis } from "@/lib/triage/stream-client";
-import { playSpokenSummary, speechRateForPriority } from "@/lib/tts/speech";
+import { playSpokenSummary, speechRateForPriority, buildSpokenSummary } from "@/lib/tts/speech";
 import type { TriageResult } from "@/lib/types";
 
 async function resolveAddress(lat: number, lng: number): Promise<string | null> {
@@ -83,6 +83,7 @@ export default function TriagePage() {
   const t = getTranslations(languageOption.translationKey);
 
   const [recording, setRecording] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [finalTranscript, setFinalTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [manualSymptoms, setManualSymptoms] = useState("");
@@ -406,6 +407,16 @@ export default function TriagePage() {
             break;
           }
 
+          case "speech.started": {
+            setIsSpeaking(true);
+            break;
+          }
+
+          case "speech.stopped": {
+            setIsSpeaking(false);
+            break;
+          }
+
           case "error": {
             console.error("[Valsea] Error event:", msg);
             setMicError(`Voice recognition error: ${msg.message ?? "Unknown error"}`);
@@ -593,7 +604,7 @@ export default function TriagePage() {
     setResultTimestamp(new Date().toISOString());
     streamPriorityRef.current = "P3";
 
-    const effectiveLanguage = resolveEffectiveGroqLanguage(language, transcriptBody);
+    const groqLanguage = languageOption.valseaLanguage;
     const speechCode = getSpeechCode(language);
     let ttsStarted = false;
 
@@ -604,7 +615,7 @@ export default function TriagePage() {
       location: patientLocation,
       chiefComplaint,
       patientId: patientId || undefined,
-      language: effectiveLanguage,
+      language: groqLanguage,
       transcript: transcriptBody,
     };
 
@@ -628,7 +639,7 @@ export default function TriagePage() {
           ttsStarted = true;
           setEarlyTtsPlayed(true);
           void playSpokenSummary({
-            text: data.reason.trim().substring(0, 100) || "Assessment complete",
+            text: buildSpokenSummary(data),
             speechCode,
             speed: speechRateForPriority(data.priority),
           });
@@ -650,7 +661,7 @@ export default function TriagePage() {
           ttsStarted = true;
           setEarlyTtsPlayed(true);
           void playSpokenSummary({
-            text: sentence.trim().substring(0, 100) || "Assessment complete",
+            text: sentence.trim().substring(0, 150) || "Assessment complete.",
             speechCode,
             speed: speechRateForPriority(streamPriorityRef.current),
           });
@@ -681,6 +692,7 @@ export default function TriagePage() {
     patientLocation,
     patientName,
     stopRecognition,
+    languageOption.valseaLanguage,
     t.errorGeneric,
   ]);
 
@@ -695,8 +707,6 @@ export default function TriagePage() {
     setSaveState("saving");
 
     try {
-      const effectiveLanguage = resolveEffectiveGroqLanguage(language, transcriptFull);
-
       const res = await fetch("/api/triage", {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
@@ -707,7 +717,7 @@ export default function TriagePage() {
           location: patientLocation,
           chiefComplaint,
           patientId: patientId || undefined,
-          language: effectiveLanguage,
+          language: getLanguageOption(language).valseaLanguage,
           transcript: transcriptFull,
           persist: true,
           triageResult: result,
@@ -773,6 +783,13 @@ export default function TriagePage() {
           </>
         }
       />
+
+      {streaming && (
+        <LoadingOverlay
+          messages={[t.loadingAnalyzing, t.loadingPriority, t.loadingResults]}
+          waitHint={t.loadingWaitTime}
+        />
+      )}
 
       <main className="mx-auto max-w-3xl pb-10">
         {!showResults && (
@@ -877,10 +894,13 @@ export default function TriagePage() {
               {recording && (
                 <div className="flex flex-col items-center">
                   <div className="relative flex h-[88px] w-[88px] items-center justify-center">
+                    {isSpeaking && (
+                      <span className="mic-speaking-ring h-[100px] w-[100px]" />
+                    )}
                     <span className="mic-ring-rec h-[110px] w-[110px]" style={{ animationDelay: "0s" }} />
                     <span className="mic-ring-rec h-[130px] w-[130px]" style={{ animationDelay: "0.4s" }} />
                     <span className="mic-ring-rec h-[150px] w-[150px]" style={{ animationDelay: "0.8s" }} />
-                    <div className="mic-btn-recording">
+                    <div className={`mic-btn-recording ${isSpeaking ? "mic-speaking-active" : ""}`}>
                       <MicIcon size={32} />
                     </div>
                   </div>

@@ -25,16 +25,15 @@ export async function POST(req: Request) {
     const response = await openai.audio.speech.create({
       model: "tts-1",
       voice: "nova",
-      input: text.trim().substring(0, 300),
+      input: text.trim().substring(0, 150),
       speed: 1.0,
     });
 
-    const audioBuffer = await response.arrayBuffer();
-
-    return new NextResponse(audioBuffer, {
+    return new NextResponse(response.body, {
       headers: {
         "Content-Type": "audio/mpeg",
-        "Content-Length": audioBuffer.byteLength.toString(),
+        "Transfer-Encoding": "chunked",
+        "Cache-Control": "no-cache",
       },
     });
   } catch (error) {

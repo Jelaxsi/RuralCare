@@ -118,7 +118,7 @@ export function TriageResults({
     }
 
     try {
-      await playSpokenSummary({
+      void playSpokenSummary({
         text: spokenText,
         speechCode,
         speed: speechRateForPriority(result.priority),
@@ -168,16 +168,16 @@ export function TriageResults({
 
   async function shareResults() {
     const summary = [
-      "RuralCare Triage Result",
-      `Patient: ${patientName || "Unknown"}, Age: ${age || "Unknown"}`,
-      `Priority: ${result.priority}`,
-      `Assessment: ${result.reason}`,
-      `Time: ${formatAssessedAt(timestamp)}`,
+      t.shareSummaryTitle,
+      `${t.sharePatientLabel}: ${patientName || t.shareUnknown}, ${t.ageLabel}: ${age || t.shareUnknown}`,
+      `${t.sharePriorityLabel}: ${result.priority}`,
+      `${t.shareAssessmentLabel}: ${result.reason}`,
+      `${t.shareTimeLabel}: ${formatAssessedAt(timestamp)}`,
     ].join("\n");
 
     try {
       if (navigator.share) {
-        await navigator.share({ title: "RuralCare Triage", text: summary });
+        await navigator.share({ title: t.shareSummaryTitle, text: summary });
         return;
       }
       await navigator.clipboard.writeText(summary);
@@ -192,15 +192,15 @@ export function TriageResults({
     <div ref={printRef} className="space-y-3 page-fade-in">
       {result.priority === "P1" && (
         <StaggerCard index={cardIndex++}>
-          <EmergencyContacts title={t.callEmergency} />
+          <EmergencyContacts t={t} />
         </StaggerCard>
       )}
 
       <StaggerCard index={cardIndex++}>
         <section
           id="triage-print-priority"
-          className={`mx-4 rounded-[20px] border p-6 ${PRIORITY_BANNER[result.priority]} ${
-            result.priority === "P1" ? "p1-glow" : ""
+          className={`mx-4 rounded-[20px] border-2 p-6 ${PRIORITY_BANNER[result.priority]} ${
+            result.priority === "P1" ? "p1-glow p1-border-pulse border-red-500" : "border-transparent"
           } ${isStreaming ? "animate-pulse" : ""}`}
         >
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -235,7 +235,9 @@ export function TriageResults({
           <p className="mt-1 break-words text-xl text-white/80">{result.likely_condition}</p>
           <p className="mt-2 break-words text-sm italic text-white/50">{result.reason}</p>
           <p className="mt-3 text-xs text-white/30">{assessedLabel}</p>
-          <p className="mt-1 text-xs text-white/25">ID: {patientId}</p>
+          <p className="mt-1 text-xs text-white/25">
+            {t.patientIdLabel}: {patientId}
+          </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {speaking && (

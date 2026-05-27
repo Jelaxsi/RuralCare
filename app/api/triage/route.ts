@@ -4,6 +4,7 @@ import { hospitalConfig } from "@/lib/hospital/config";
 import { resolveEffectiveGroqLanguageFromInput } from "@/lib/i18n/speech-lang";
 import {
   analyzeWithGroq,
+  buildTriageFallback,
   createTriageCompletionStream,
   extractJson,
   normalizeResult,
@@ -136,8 +137,27 @@ export async function POST(req: Request) {
               );
             }
 
-            const parsed = extractJson(full) as Record<string, unknown>;
-            const result = normalizeResult(parsed);
+            if (!full.trim()) {
+              const result = buildTriageFallback(groqParams.transcript, groqParams.language);
+              durationMs = Date.now() - start;
+              logTriage(ip, result.priority, durationMs);
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({ type: "done", result, durationMs })}\n\n`,
+                ),
+              );
+              controller.close();
+              return;
+            }
+
+            let result: TriageResult;
+            try {
+              const parsed = extractJson(full) as Record<string, unknown>;
+              result = normalizeResult(parsed);
+            } catch (parseErr) {
+              console.error("[triage] stream parse error:", parseErr);
+              result = buildTriageFallback(groqParams.transcript, groqParams.language);
+            }
             durationMs = Date.now() - start;
             logTriage(ip, result.priority, durationMs);
 
@@ -149,9 +169,12 @@ export async function POST(req: Request) {
             controller.close();
           } catch (err) {
             console.error("[triage] stream error:", err);
+            const result = buildTriageFallback(groqParams.transcript, groqParams.language);
+            durationMs = Date.now() - start;
+            logTriage(ip, result.priority, durationMs);
             controller.enqueue(
               encoder.encode(
-                `data: ${JSON.stringify({ type: "error", message: "Triage analysis failed" })}\n\n`,
+                `data: ${JSON.stringify({ type: "done", result, durationMs })}\n\n`,
               ),
             );
             controller.close();
@@ -216,7 +239,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ...triage, id, patientId: record.patientId, responseTimeMs: durationMs });
   } catch (err) {
     console.error("[triage] POST error:", err);
-    return NextResponse.json({ error: "Triage analysis failed" }, { status: 500 });
+    const fallback = buildTriageFallback(input.transcript, input.language);
+    return NextResponse.json({ ...fallback, responseTimeMs: 0 });
   }
 }
 

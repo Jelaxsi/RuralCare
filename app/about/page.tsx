@@ -55,8 +55,8 @@ export default function AboutPage() {
         <section className="result-card-premium mb-8 !mx-0">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-violet-400">Contact</h2>
           <p className="text-sm text-white/65">
-            <a href="https://github.com" className="text-violet-400 underline" target="_blank" rel="noreferrer">
-              GitHub
+            <a href="https://github.com/Jelaxsi/RuralCare" className="text-violet-400 underline" target="_blank" rel="noreferrer">
+              github.com/Jelaxsi/RuralCare
             </a>
             {" · "}
             <Link href="/" className="text-violet-400 underline">Start triage</Link>

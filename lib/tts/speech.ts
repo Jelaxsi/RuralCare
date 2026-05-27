@@ -1,11 +1,12 @@
 import type { Priority, TriageResult } from "../types";
 
+/** Shortest speakable text — reason field only. */
 export function buildSpokenSummary(result: TriageResult): string {
-  const spokenText =
-    result.reason?.trim() ||
-    result.what_is_happening?.trim() ||
-    "Assessment complete. Please see results.";
-  return spokenText.substring(0, 100);
+  const reason = result.reason?.trim();
+  if (!reason || reason === "…") {
+    return "Assessment complete.";
+  }
+  return reason.substring(0, 150);
 }
 
 export function speechRateForPriority(priority: Priority): number {
@@ -30,14 +31,9 @@ export async function playSpokenSummary(params: {
 
   if (typeof window === "undefined") return;
 
-  const spokenText = (
-    text?.trim() || "Assessment complete. Please see results."
-  ).substring(0, 100);
+  const spokenText = (text?.trim() || "Assessment complete.").substring(0, 150);
 
-  if (spokenText.trim().length < 2) {
-    console.log("[TTS] Skipping — text too short");
-    return;
-  }
+  if (spokenText.trim().length < 2) return;
 
   console.log("[TTS] About to speak:", {
     text: spokenText.substring(0, 50),
@@ -54,16 +50,18 @@ export async function playSpokenSummary(params: {
       }),
     });
 
-    if (res.status === 204 || !res.ok) {
-      console.log("[TTS] No audio returned, skipping");
-      if (res.status === 503) {
-        throw new Error("OPENAI_API_KEY missing — save .env.local and restart npm run dev");
-      }
+    if (res.status === 204) return;
+
+    if (!res.ok) {
+      browserSpeak(spokenText, speechCode);
       return;
     }
 
     const blob = await res.blob();
-    if (blob.size === 0) return;
+    if (blob.size === 0) {
+      browserSpeak(spokenText, speechCode);
+      return;
+    }
 
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
@@ -74,10 +72,8 @@ export async function playSpokenSummary(params: {
       browserSpeak(spokenText, speechCode);
     };
 
-    await audio.play();
-    console.log("[TTS] OpenAI speaking:", speechCode);
-  } catch (err) {
-    console.error("[TTS] OpenAI failed, using browser:", err);
+    void audio.play();
+  } catch {
     browserSpeak(spokenText, speechCode);
   }
 }

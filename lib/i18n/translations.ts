@@ -118,6 +118,15 @@ export type TranslationKeys = {
   loadingWaitTime: string;
   offlineBanner: string;
   footerText: string;
+  callEmergencyNow: string;
+  call1990SuwaSeriya: string;
+  call108Ambulance: string;
+  shareSummaryTitle: string;
+  shareUnknown: string;
+  sharePatientLabel: string;
+  sharePriorityLabel: string;
+  shareAssessmentLabel: string;
+  shareTimeLabel: string;
 };
 
 const en: TranslationKeys = {
@@ -241,6 +250,15 @@ const en: TranslationKeys = {
   loadingWaitTime: "This usually takes 2–3 seconds",
   offlineBanner: "You are offline. Some features may not work.",
   footerText: "RuralCare © 2026 | Not a medical device | Built for rural healthcare",
+  callEmergencyNow: "CALL EMERGENCY NOW",
+  call1990SuwaSeriya: "Call 1990 — Suwa Seriya",
+  call108Ambulance: "Call 108 — Ambulance",
+  shareSummaryTitle: "RuralCare Triage Result",
+  shareUnknown: "Unknown",
+  sharePatientLabel: "Patient",
+  sharePriorityLabel: "Priority",
+  shareAssessmentLabel: "Assessment",
+  shareTimeLabel: "Time",
 };
 
 export const translations: Record<TranslationLanguage, TranslationKeys> = {
@@ -351,6 +369,20 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     callEmergency: "ගිලන් රථයකට වහාම 1990 අමතන්න",
     noHospitalsNearby: "ළඟ රෝහල් හමු නොවීය — හදිසි ගිලන් රථයට 1990 අමතන්න",
     clinicalReasoning: "සායනික තර්කනය (කාර්ය මණ්ඩලය)",
+    loadingAnalyzing: "රෝග ලක්ෂණ විශ්ලේෂණය කරමින්...",
+    loadingPriority: "ප්‍රමුඛතාව තක්සේරු කරමින්...",
+    loadingResults: "ප්‍රතිඵල සකස් කරමින්...",
+    callEmergencyNow: "හදිසි ඇමතුමක් ගන්න",
+    call1990SuwaSeriya: "1990 අමතන්න — Suwa Seriya",
+    call108Ambulance: "108 අමතන්න — ගිලන් රථය",
+    shareSummaryTitle: "RuralCare ත්‍රාසන ප්‍රතිඵලය",
+    shareUnknown: "නොදනී",
+    sharePatientLabel: "රෝගියා",
+    sharePriorityLabel: "ප්‍රමුඛතාව",
+    shareAssessmentLabel: "ඇගයීම",
+    shareTimeLabel: "වේලාව",
+    startNewAssessment: "← නව ත්‍රාසනයක්",
+    assessedAt: "ඇගයීම කළ වේලාව",
   },
 
   // ─── TAMIL ──────────────────────────────────────────────────────────────────
@@ -458,6 +490,20 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     callEmergency: "ஆம்புலன்ஸுக்கு உடனே 1990 அழைக்கவும்",
     noHospitalsNearby: "அருகில் மருத்துவமனைகள் இல்லை — அவசர ஆம்புலன்ஸுக்கு 1990 அழைக்கவும்",
     clinicalReasoning: "மருத்துவ தர்க்கம் (பணியாளர்களுக்கு)",
+    loadingAnalyzing: "அறிகுறிகளை பகுப்பாய்வு செய்கிறோம்...",
+    loadingPriority: "முன்னுரிமையை மதிப்பிடுகிறோம்...",
+    loadingResults: "முடிவுகளை தயார் செய்கிறோம்...",
+    startNewAssessment: "← புதிய மதிப்பீட்டை தொடங்கு",
+    assessedAt: "மதிப்பீடு நேரம்",
+    callEmergencyNow: "அவசர அழைப்பு செய்யுங்கள்",
+    call1990SuwaSeriya: "1990 அழைக்கவும் — Suwa Seriya",
+    call108Ambulance: "108 அழைக்கவும் — ஆம்புலன்ஸ்",
+    shareSummaryTitle: "RuralCare சோதனை முடிவு",
+    shareUnknown: "தெரியவில்லை",
+    sharePatientLabel: "நோயாளர்",
+    sharePriorityLabel: "முன்னுரிமை",
+    shareAssessmentLabel: "மதிப்பீடு",
+    shareTimeLabel: "நேரம்",
   },
 
   // ─── HINDI ──────────────────────────────────────────────────────────────────
@@ -547,6 +593,18 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     callEmergency: "तुरंत 1990 पर कॉल करें",
     noHospitalsNearby: "पास में कोई अस्पताल नहीं — आपातकालीन एम्बुलेंस के लिए 1990 कॉल करें",
     clinicalReasoning: "चिकित्सा तर्क (कर्मचारी)",
+    loadingAnalyzing: "लक्षणों का विश्लेषण…",
+    loadingPriority: "प्राथमिकता का आकलन…",
+    loadingResults: "परिणाम तैयार कर रहे हैं…",
+    callEmergencyNow: "अभी आपातकालीन कॉल करें",
+    call1990SuwaSeriya: "1990 पर कॉल करें — Suwa Seriya",
+    call108Ambulance: "108 पर कॉल करें — एम्बुलेंस",
+    shareSummaryTitle: "RuralCare ट्राइएज परिणाम",
+    shareUnknown: "अज्ञात",
+    sharePatientLabel: "रोगी",
+    sharePriorityLabel: "प्राथमिकता",
+    shareAssessmentLabel: "आकलन",
+    shareTimeLabel: "समय",
   },
 
   // ─── BENGALI ────────────────────────────────────────────────────────────────
