@@ -39,6 +39,13 @@ export type TranslationKeys = {
   openDashboard: string;
   systemLive: string;
   systemChecking: string;
+  triageSessionSetup: string;
+  triageConnectedReady: string;
+  triageOfflineVoice: string;
+  triageBackOnline: string;
+  triageEmergencySkip: string;
+  triageManualSymptomsLabel: string;
+  footerRights: string;
   systemDegraded: string;
   systemOffline: string;
   startingSpeech: string;
@@ -277,7 +284,14 @@ const en: TranslationKeys = {
   openDashboard: "Open dashboard",
   systemLive: "System Online",
   systemDegraded: "Degraded",
-  systemChecking: "Checking…",
+  systemChecking: "Setting up your session…",
+  triageSessionSetup: "Setting up your session…",
+  triageConnectedReady: "Connected — voice assessment ready",
+  triageOfflineVoice: "You're offline — voice unavailable. Type your symptoms below.",
+  triageBackOnline: "Back online",
+  triageEmergencySkip: "In an emergency? Skip details and speak now →",
+  triageManualSymptomsLabel: "Type symptoms manually",
+  footerRights: "All rights reserved by Jelaxsi Kularasan",
   systemOffline: "System offline",
   startingSpeech: "Starting speech recognition…",
   transcriptPreview: "Updates as you speak",

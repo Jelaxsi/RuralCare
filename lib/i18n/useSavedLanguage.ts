@@ -6,6 +6,12 @@ import { getTranslations } from "./translations";
 
 export const LANGUAGE_STORAGE_KEY = "ruralcare-language";
 
+export function hasStoredLanguagePreference(): boolean {
+  if (typeof window === "undefined") return false;
+  const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  return Boolean(saved && LANGUAGE_OPTIONS.some((l) => l.code === saved));
+}
+
 export function resolveStoredLanguageCode(): LanguageCode {
   if (typeof window === "undefined") return "english";
   const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);

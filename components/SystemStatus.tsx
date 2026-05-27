@@ -58,21 +58,35 @@ export function SystemStatus({ translationLang }: { translationLang: Translation
 
   return (
     <div
-      className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-100 px-3 py-1.5 backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.05]"
+      className={`flex items-center gap-2 rounded-full border border-gray-200 bg-gray-100 px-3 py-1.5 backdrop-blur-sm transition-opacity duration-500 dark:border-white/10 dark:bg-white/[0.05] ${
+        status === "checking" ? "animate-triage-fade-in" : "opacity-100"
+      }`}
       role="status"
       aria-live="polite"
       aria-label={`System status: ${label}`}
     >
-      <span className="relative flex h-2 w-2">
-        {status === "online" && (
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/70 opacity-75" />
-        )}
-        {status === "degraded" && (
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning/70 opacity-75" />
-        )}
-        <span className={`relative inline-flex h-2 w-2 rounded-full ${dotClass}`} />
-      </span>
-      <span className="text-xs font-medium text-gray-600 dark:text-white/70">{label}</span>
+      {status === "checking" ? (
+        <>
+          <span
+            className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#7c3aed]/30 border-t-[#7c3aed]"
+            aria-hidden
+          />
+          <span className="text-xs font-medium text-gray-600 dark:text-white/70">{label}</span>
+        </>
+      ) : (
+        <>
+          <span className="relative flex h-2 w-2">
+            {status === "online" && (
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/70 opacity-75 motion-reduce:animate-none" />
+            )}
+            {status === "degraded" && (
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning/70 opacity-75 motion-reduce:animate-none" />
+            )}
+            <span className={`relative inline-flex h-2 w-2 rounded-full ${dotClass}`} />
+          </span>
+          <span className="text-xs font-medium text-gray-600 dark:text-white/70">{label}</span>
+        </>
+      )}
     </div>
   );
 }

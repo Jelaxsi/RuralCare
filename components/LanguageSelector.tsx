@@ -40,7 +40,7 @@ export function LanguageSelector({
         type="button"
         aria-expanded={open}
         aria-haspopup="listbox"
-        aria-label={`${t.preferredLanguage}: ${selected.label}`}
+        aria-label="Select language"
         onClick={() => setOpen((o) => !o)}
         className="flex w-full min-w-0 items-center justify-between gap-2 rounded-full border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 backdrop-blur-md transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:hover:bg-white/[0.08] sm:px-4 sm:text-base"
       >

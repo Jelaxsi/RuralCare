@@ -9,6 +9,9 @@ import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { PatientFeedback } from "@/components/PatientFeedback";
 import { TriageErrorBoundary } from "@/components/TriageErrorBoundary";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { LanguageFirstPrompt } from "@/components/triage/LanguageFirstPrompt";
+import { TriageConnectionBar } from "@/components/triage/TriageConnectionBar";
+import { PatientIdBadge, TriageSessionSetup } from "@/components/triage/TriageSessionSetup";
 import { MicSoundWave } from "@/components/SoundWaveVisualizer";
 import { SystemStatus, ThemeToggle } from "@/components/SystemStatus";
 import { TriageResults } from "@/components/TriageResults";
@@ -21,7 +24,7 @@ import {
   getSpeechCode,
 } from "@/lib/i18n/speech-lang";
 import { getTranslations } from "@/lib/i18n/translations";
-import { LANGUAGE_STORAGE_KEY, resolveStoredLanguageCode } from "@/lib/i18n/useSavedLanguage";
+import { LANGUAGE_STORAGE_KEY, hasStoredLanguagePreference, resolveStoredLanguageCode } from "@/lib/i18n/useSavedLanguage";
 import { emptyStreamingResult } from "@/lib/triage/stream-parse";
 import { streamTriageAnalysis } from "@/lib/triage/stream-client";
 import { playSpokenSummary, speechRateForPriority, buildSpokenSummary } from "@/lib/tts/speech";
@@ -104,7 +107,16 @@ export default function TriagePage() {
   const [savedCaseId, setSavedCaseId] = useState<string | null>(null);
   const [retryAnalyze, setRetryAnalyze] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [patientIdLoading, setPatientIdLoading] = useState(true);
+  const [patientIdFailed, setPatientIdFailed] = useState(false);
+  const [sessionChecking, setSessionChecking] = useState(true);
+  const [sessionExiting, setSessionExiting] = useState(false);
+  const [mainVisible, setMainVisible] = useState(false);
+  const [needsLanguagePrompt, setNeedsLanguagePrompt] = useState(false);
+  const [emergencyMode, setEmergencyMode] = useState(false);
+  const [ctaPressed, setCtaPressed] = useState(false);
   const formRef = useRef<HTMLElement>(null);
+  const manualInputRef = useRef<HTMLTextAreaElement>(null);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -141,14 +153,61 @@ export default function TriagePage() {
   }, [recording]);
 
   useEffect(() => {
-    setPatientId(createClientPatientId());
-    setLanguage(resolveStoredLanguageCode());
+    try {
+      setPatientId(createClientPatientId());
+      setPatientIdFailed(false);
+    } catch {
+      setPatientId("");
+      setPatientIdFailed(true);
+    } finally {
+      setPatientIdLoading(false);
+    }
+
+    setNeedsLanguagePrompt(!hasStoredLanguagePreference());
+    if (hasStoredLanguagePreference()) {
+      setLanguage(resolveStoredLanguageCode());
+    }
     setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches || "ontouchstart" in window);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-  }, [language]);
+    let cancelled = false;
+    async function setupSession() {
+      try {
+        await fetch("/api/health", { cache: "no-store" });
+      } catch (err) {
+        console.warn("[Triage] Session health check failed:", err);
+      }
+      if (cancelled) return;
+      setSessionExiting(true);
+      window.setTimeout(() => {
+        if (!cancelled) {
+          setSessionChecking(false);
+          setMainVisible(true);
+        }
+      }, 450);
+    }
+    void setupSession();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (hasStoredLanguagePreference() || needsLanguagePrompt === false) {
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    }
+  }, [language, needsLanguagePrompt]);
+
+  const handleLanguagePromptSelect = useCallback((code: LanguageCode) => {
+    setLanguage(code);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, code);
+    setNeedsLanguagePrompt(false);
+  }, []);
+
+  const focusManualInput = useCallback(() => {
+    window.setTimeout(() => manualInputRef.current?.focus(), 100);
+  }, []);
 
   const transcriptFull = useMemo(() => {
     const spoken = `${finalTranscript} ${interimTranscript}`.trim();
@@ -544,6 +603,27 @@ export default function TriagePage() {
     startWebSpeech();
   }, [language, resetSession, startValsea, startWebSpeech]);
 
+  const handleBeginAssessment = useCallback(() => {
+    setCtaPressed(true);
+    window.setTimeout(() => {
+      setCtaPressed(false);
+      void startRecording();
+    }, 160);
+  }, [startRecording]);
+
+  const handleEmergencySkip = useCallback(() => {
+    setEmergencyMode(true);
+    if (!patientId) {
+      try {
+        setPatientId(createClientPatientId());
+        setPatientIdFailed(false);
+      } catch {
+        setPatientIdFailed(true);
+      }
+    }
+    void startRecording();
+  }, [patientId, startRecording]);
+
   // Handle live language switching while recording
   useEffect(() => {
     if (!recording) {
@@ -773,7 +853,17 @@ export default function TriagePage() {
     setLastError(null);
     setSavedCaseId(null);
     setSaveState("idle");
-    setPatientId(createClientPatientId());
+    setEmergencyMode(false);
+    setPatientIdLoading(true);
+    try {
+      setPatientId(createClientPatientId());
+      setPatientIdFailed(false);
+    } catch {
+      setPatientId("");
+      setPatientIdFailed(true);
+    } finally {
+      setPatientIdLoading(false);
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [resetSession, stopRecognition]);
 
@@ -842,11 +932,22 @@ export default function TriagePage() {
         right={
           <>
             <ThemeToggle translationLang={languageOption.translationKey} />
-            <LanguageSelector value={language} onChange={setLanguage} />
+            {!needsLanguagePrompt && (
+              <LanguageSelector value={language} onChange={setLanguage} />
+            )}
             <SystemStatus translationLang={languageOption.translationKey} />
           </>
         }
       />
+
+      {!showResults && (
+        <TriageConnectionBar
+          connectedLabel={t.triageConnectedReady}
+          offlineLabel={t.triageOfflineVoice}
+          backOnlineLabel={t.triageBackOnline}
+          onOffline={focusManualInput}
+        />
+      )}
 
       {streaming && (
         <LoadingOverlay
@@ -857,8 +958,25 @@ export default function TriagePage() {
       )}
 
       <main className="mx-auto max-w-3xl pb-10">
+        {!showResults && sessionChecking && (
+          <div className="pt-[calc(64px+8px)]">
+            <TriageSessionSetup message={t.triageSessionSetup} exiting={sessionExiting} />
+          </div>
+        )}
+
         {!showResults && (
-          <>
+          <div
+            className={`transition-opacity duration-500 ${
+              mainVisible ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+            }`}
+          >
+            {needsLanguagePrompt && (
+              <div className="pt-[calc(64px+8px)]">
+                <LanguageFirstPrompt onSelect={handleLanguagePromptSelect} />
+              </div>
+            )}
+
+            <>
             <section className="hero-section px-4 pb-4 pt-[calc(64px+24px)] text-center">
               <h1 className="landing-gradient-title mb-4">{t.title}</h1>
               <p className="mx-auto max-w-lg text-base text-text-muted">{t.subtitle}</p>
@@ -894,101 +1012,126 @@ export default function TriagePage() {
             <div className="mx-4 mb-6">
               <DisclaimerBanner text={t.disclaimerLanding} />
             </div>
+
+            {!emergencyMode && (
             <TriageErrorBoundary resetLabel={t.tryAgain}>
             <section ref={formRef} className="form-card mb-6 scroll-mt-24" aria-labelledby="intake-heading">
-              <p id="intake-heading" className="mb-4 text-xs font-semibold uppercase tracking-widest text-violet-400/80">
+              <h2 id="intake-heading" className="mb-4 text-sm font-semibold uppercase tracking-widest text-violet-600 dark:text-violet-400/90">
                 {t.patientDetails}
-              </p>
-              <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 font-mono text-xs text-violet-300">
-                <span>{t.patientIdLabel}:</span>
-                <span suppressHydrationWarning>
-                  {patientId ? patientId : <span className="opacity-0">LOADING</span>}
-                </span>
-              </div>
+              </h2>
+              <PatientIdBadge
+                label={t.patientIdLabel}
+                patientId={patientId}
+                loading={patientIdLoading}
+                failed={patientIdFailed}
+              />
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="form-label">{t.patientNameLabel}</label>
+                  <label htmlFor="patient-name" className="form-label">{t.patientNameLabel}</label>
                   <input
+                    id="patient-name"
                     type="text"
                     value={patientName}
                     onChange={(e) => setPatientName(e.target.value)}
                     placeholder={t.namePlaceholder}
-                    className="form-input"
+                    className="triage-focus-ring form-input"
                   />
                 </div>
                 <div>
-                  <label className="form-label">{t.ageLabel}</label>
+                  <label htmlFor="patient-age" className="form-label">{t.ageLabel}</label>
                   <input
+                    id="patient-age"
                     type="number"
                     min={0}
                     max={150}
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
                     placeholder={t.agePlaceholder}
-                    className="form-input"
+                    className="triage-focus-ring form-input"
                   />
                 </div>
                 <div>
-                  <label className="form-label">{t.genderLabel}</label>
-                  <select value={gender} onChange={(e) => setGender(e.target.value)} className="form-input">
+                  <label htmlFor="patient-gender" className="form-label">{t.genderLabel}</label>
+                  <select
+                    id="patient-gender"
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className="triage-focus-ring form-input"
+                  >
                     <option value="">{t.genderPreferNot}</option>
                     <option value="male">{t.genderMale}</option>
                     <option value="female">{t.genderFemale}</option>
                   </select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="form-label">{t.locationLabel}</label>
+                  <label htmlFor="patient-location" className="form-label">{t.locationLabel}</label>
                   <div className="flex gap-2">
                     <input
+                      id="patient-location"
                       type="text"
                       value={patientLocation}
                       onChange={(e) => setPatientLocation(e.target.value)}
                       placeholder={t.locationPlaceholder}
-                      className="form-input flex-1"
+                      className="triage-focus-ring form-input flex-1"
                     />
                     <button
                       type="button"
                       onClick={() => void detectLocation()}
                       disabled={locating}
-                      className="shrink-0 rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-xs text-gray-700 transition hover:bg-gray-200 disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-white/70 dark:hover:bg-white/10"
+                      aria-label={t.detectLocation}
+                      className="triage-focus-ring shrink-0 rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-xs text-gray-700 transition hover:bg-gray-200 disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-white/70 dark:hover:bg-white/10"
                     >
                       {locating ? t.locationDetecting : t.detectLocation}
                     </button>
                   </div>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="form-label">{t.chiefComplaintLabel}</label>
+                  <label htmlFor="chief-complaint" className="form-label form-label-optional">
+                    {t.chiefComplaintLabel}
+                  </label>
                   <input
+                    id="chief-complaint"
                     type="text"
                     value={chiefComplaint}
                     onChange={(e) => setChiefComplaint(e.target.value)}
                     placeholder={t.chiefComplaintPlaceholder}
-                    className="form-input"
+                    className="triage-focus-ring form-input text-sm"
                   />
                 </div>
               </div>
             </section>
+            </TriageErrorBoundary>
+            )}
 
-            {/* Mic section */}
-            <section className="flex flex-col items-center gap-4 px-4 py-8">
+            {/* Primary CTA */}
+            <section className="flex flex-col items-center gap-3 px-4 pb-4">
               {!recording && (
-                <div className="flex flex-col items-center">
+                <>
                   <button
                     type="button"
-                    onClick={() => void startRecording()}
-                    aria-label={t.startBtn}
-                    className="mic-btn-idle"
+                    onClick={handleBeginAssessment}
+                    aria-label="Begin voice assessment"
+                    className={`triage-primary-cta triage-focus-ring ${ctaPressed ? "scale-[0.98]" : "triage-cta-pulse"}`}
                   >
-                    <MicIcon size={32} />
+                    {t.startBtn}
                   </button>
-                  <p className="mt-2 text-sm text-gray-400 dark:text-white/40">{t.startBtn}</p>
                   {!isTouchDevice && (
-                    <p className="mt-2 text-xs text-gray-400 dark:text-white/30">{t.keyboardHints}</p>
+                    <p className="text-xs text-gray-400 dark:text-white/30">{t.keyboardHints}</p>
                   )}
-                </div>
+                  <button
+                    type="button"
+                    onClick={handleEmergencySkip}
+                    className="triage-focus-ring text-sm font-medium text-[#7c3aed] underline-offset-2 hover:underline dark:text-violet-400"
+                  >
+                    {t.triageEmergencySkip}
+                  </button>
+                </>
               )}
+            </section>
 
+            {/* Mic section — recording state */}
+            <section className="flex flex-col items-center gap-4 px-4 py-4">
               {recording && (
                 <div className="flex flex-col items-center">
                   <div className="relative flex h-[88px] w-[88px] items-center justify-center">
@@ -1070,18 +1213,23 @@ export default function TriagePage() {
 
             {/* Manual input — always visible */}
             <section className="mx-4 mb-4">
+              <label htmlFor="manual-symptoms" className="form-label">
+                {t.triageManualSymptomsLabel}
+              </label>
               <p className="mb-1.5 text-xs text-gray-400 dark:text-white/30">{t.manualInputHint}</p>
               <textarea
+                id="manual-symptoms"
+                ref={manualInputRef}
                 value={manualSymptoms}
                 onChange={(e) => setManualSymptoms(e.target.value)}
                 placeholder={t.manualPlaceholder}
-                className={`form-input h-20 resize-none rounded-2xl ${
+                className={`triage-focus-ring form-input h-20 resize-none rounded-2xl ${
                   highlightManualInput ? "ring-2 ring-violet-500/40" : ""
                 }`}
               />
             </section>
-            </TriageErrorBoundary>
-          </>
+            </>
+          </div>
         )}
 
         {showResults && displayResult && (
@@ -1090,7 +1238,7 @@ export default function TriagePage() {
               <TriageResults
                 result={displayResult}
                 t={t}
-                patientId={patientId || "--------"}
+                patientId={patientId || ""}
                 patientName={patientName}
                 age={age}
                 gender={gender}
@@ -1137,7 +1285,7 @@ export default function TriagePage() {
         )}
       </main>
 
-      <AppFooter text={t.footerText} />
+      <AppFooter minimal text={t.footerText} rightsText={t.footerRights} />
     </div>
   );
 }
