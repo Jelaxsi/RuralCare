@@ -200,7 +200,7 @@ export function TriageResults({
         <section
           id="triage-print-priority"
           className={`mx-4 rounded-[20px] border-2 p-6 ${PRIORITY_BANNER[result.priority]} ${
-            result.priority === "P1" ? "p1-glow p1-border-pulse border-red-500" : "border-transparent"
+            result.priority === "P1" ? "pulse-red border-red-500" : "border-transparent"
           } ${isStreaming ? "animate-pulse" : ""}`}
         >
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -255,7 +255,7 @@ export function TriageResults({
               </button>
             )}
             <button type="button" onClick={() => void speak()} className="text-xs text-white/50 hover:text-white">
-              {t.replayAudio}
+              {t.listenAgain}
             </button>
             <button type="button" onClick={printResults} className="text-xs text-white/50 hover:text-white">
               {t.printResult}

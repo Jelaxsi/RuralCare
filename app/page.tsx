@@ -83,7 +83,7 @@ export default function TriagePage() {
   const t = getTranslations(languageOption.translationKey);
 
   const [recording, setRecording] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [finalTranscript, setFinalTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [manualSymptoms, setManualSymptoms] = useState("");
@@ -408,12 +408,12 @@ export default function TriagePage() {
           }
 
           case "speech.started": {
-            setIsSpeaking(true);
+            setIsUserSpeaking(true);
             break;
           }
 
           case "speech.stopped": {
-            setIsSpeaking(false);
+            setIsUserSpeaking(false);
             break;
           }
 
@@ -609,13 +609,16 @@ export default function TriagePage() {
     let ttsStarted = false;
 
     const triagePayload = {
+      symptoms: transcriptBody,
+      language: languageOption.valseaLanguage ?? "english",
+      patientName,
+      patientAge: age,
+      location: patientLocation,
       name: patientName,
       age,
       gender,
-      location: patientLocation,
       chiefComplaint,
       patientId: patientId || undefined,
-      language: groqLanguage,
       transcript: transcriptBody,
     };
 
@@ -711,13 +714,16 @@ export default function TriagePage() {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({
+          symptoms: transcriptFull,
+          language: getLanguageOption(language).valseaLanguage ?? "english",
+          patientName,
+          patientAge: age,
+          location: patientLocation,
           name: patientName,
           age,
           gender,
-          location: patientLocation,
           chiefComplaint,
           patientId: patientId || undefined,
-          language: getLanguageOption(language).valseaLanguage,
           transcript: transcriptFull,
           persist: true,
           triageResult: result,
@@ -894,13 +900,13 @@ export default function TriagePage() {
               {recording && (
                 <div className="flex flex-col items-center">
                   <div className="relative flex h-[88px] w-[88px] items-center justify-center">
-                    {isSpeaking && (
+                    {isUserSpeaking && (
                       <span className="mic-speaking-ring h-[100px] w-[100px]" />
                     )}
                     <span className="mic-ring-rec h-[110px] w-[110px]" style={{ animationDelay: "0s" }} />
                     <span className="mic-ring-rec h-[130px] w-[130px]" style={{ animationDelay: "0.4s" }} />
                     <span className="mic-ring-rec h-[150px] w-[150px]" style={{ animationDelay: "0.8s" }} />
-                    <div className={`mic-btn-recording ${isSpeaking ? "mic-speaking-active" : ""}`}>
+                    <div className={`mic-btn-recording ${isUserSpeaking ? "mic-speaking-active" : ""}`}>
                       <MicIcon size={32} />
                     </div>
                   </div>

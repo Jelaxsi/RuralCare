@@ -6,12 +6,16 @@ import { QRCodeCanvas } from "qrcode.react";
 import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
 
+const APP_URL = "https://rural-care-swart.vercel.app";
+
 export default function QrPage() {
-  const [appUrl, setAppUrl] = useState("https://ruralcare.app");
+  const [appUrl, setAppUrl] = useState(APP_URL);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setAppUrl(window.location.origin);
+    if (typeof window !== "undefined" && window.location.origin.includes("localhost")) {
+      setAppUrl(window.location.origin);
+    }
   }, []);
 
   const downloadPng = useCallback(() => {

@@ -324,7 +324,9 @@ export default function DashboardPage() {
             ) : error ? (
               <div className="p-12 text-center text-p1-rose">{error}</div>
             ) : filtered.length === 0 ? (
-              <div className="p-12 text-center text-text-muted">No cases match filters.</div>
+              <div className="p-12 text-center text-text-muted">
+                {cases.length === 0 ? "No cases recorded yet." : "No cases match filters."}
+              </div>
             ) : (
               <table className="min-w-[900px] w-full text-left text-base">
                 <thead className="border-b border-border bg-surface-muted text-sm uppercase tracking-wider text-text-muted">

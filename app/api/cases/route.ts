@@ -7,6 +7,6 @@ export async function GET() {
     cases.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     return NextResponse.json(cases);
   } catch {
-    return NextResponse.json({ error: "Failed to load cases" }, { status: 500 });
+    return NextResponse.json([]);
   }
 }

@@ -13,20 +13,23 @@ export function sanitizeText(input: unknown, maxLen: number): string {
 
 export function validateTriageInput(body: {
   name?: unknown;
+  patientName?: unknown;
   location?: unknown;
   language?: unknown;
   transcript?: unknown;
+  symptoms?: unknown;
   age?: unknown;
+  patientAge?: unknown;
   gender?: unknown;
   ward?: unknown;
   chiefComplaint?: unknown;
   patientId?: unknown;
 }) {
-  const transcript = sanitizeText(body.transcript, MAX_TRANSCRIPT);
-  const name = sanitizeText(body.name, MAX_NAME);
+  const transcript = sanitizeText(body.transcript ?? body.symptoms, MAX_TRANSCRIPT);
+  const name = sanitizeText(body.name ?? body.patientName, MAX_NAME);
   const location = sanitizeText(body.location, MAX_LOCATION);
   const language = sanitizeText(body.language, 50) || "english";
-  const age = sanitizeText(body.age, 10);
+  const age = sanitizeText(body.age ?? body.patientAge, 10);
   const gender = sanitizeText(body.gender, 30);
   const ward = sanitizeText(body.ward, 100);
   const chiefComplaint = sanitizeText(body.chiefComplaint, 500);

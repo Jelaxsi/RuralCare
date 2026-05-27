@@ -13,67 +13,63 @@ export function speechRateForPriority(priority: Priority): number {
   return priority === "P1" ? 1.0 : 0.85;
 }
 
-function browserSpeak(text: string, lang: string): void {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = lang;
-  u.rate = 0.9;
-  window.speechSynthesis.speak(u);
-}
-
-export async function playSpokenSummary(params: {
+export async function playSpokenSummary({
+  text,
+  speechCode,
+  speed = 1.0,
+}: {
   text: string;
   speechCode: string;
-  speed: number;
+  speed?: number;
 }): Promise<void> {
-  const { text, speechCode } = params;
-
   if (typeof window === "undefined") return;
+  if (!text || text.trim().length < 2) return;
 
-  const spokenText = (text?.trim() || "Assessment complete.").substring(0, 150);
-
-  if (spokenText.trim().length < 2) return;
-
-  console.log("[TTS] About to speak:", {
-    text: spokenText.substring(0, 50),
-    speechCode,
-  });
+  const shortText = text.trim().substring(0, 150);
+  console.log("[TTS] Speaking:", shortText.substring(0, 50));
 
   try {
     const res = await fetch("/api/tts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: spokenText,
-        language: speechCode.split("-")[0],
+        text: shortText,
+        language: speechCode,
       }),
     });
 
-    if (res.status === 204) return;
+    if (!res.ok) throw new Error(`TTS ${res.status}`);
 
-    if (!res.ok) {
-      browserSpeak(spokenText, speechCode);
-      return;
+    const arrayBuffer = await res.arrayBuffer();
+    if (arrayBuffer.byteLength < 100) throw new Error("Empty audio");
+
+    type AudioContextCtor = typeof AudioContext;
+    const AudioCtx =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: AudioContextCtor }).webkitAudioContext;
+    if (!AudioCtx) throw new Error("No AudioContext");
+
+    const audioContext = new AudioCtx();
+
+    if (audioContext.state === "suspended") {
+      await audioContext.resume();
     }
 
-    const blob = await res.blob();
-    if (blob.size === 0) {
-      browserSpeak(spokenText, speechCode);
-      return;
-    }
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioContext.destination);
+    source.playbackRate.value = speed;
+    source.start(0);
 
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-
-    audio.onended = () => URL.revokeObjectURL(url);
-    audio.onerror = () => {
-      URL.revokeObjectURL(url);
-      browserSpeak(spokenText, speechCode);
-    };
-
-    void audio.play();
-  } catch {
-    browserSpeak(spokenText, speechCode);
+    console.log("[TTS] AudioContext playing successfully");
+  } catch (err) {
+    console.error("[TTS] OpenAI failed, browser fallback:", err);
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = speechCode;
+    u.rate = speed;
+    window.speechSynthesis.speak(u);
   }
 }

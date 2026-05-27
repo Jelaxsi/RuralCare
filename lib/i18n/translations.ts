@@ -72,6 +72,7 @@ export type TranslationKeys = {
   printResult: string;
   printActions: string;
   replayAudio: string;
+  listenAgain: string;
   muteAudio: string;
   unmuteAudio: string;
   speaking: string;
@@ -207,6 +208,7 @@ const en: TranslationKeys = {
   printResult: "Print triage card",
   printActions: "Print action card",
   replayAudio: "Hear this again",
+  listenAgain: "Listen again",
   muteAudio: "Mute audio",
   unmuteAudio: "Unmute audio",
   speaking: "Speaking…",
@@ -343,6 +345,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     printResult: "ත්‍රාසන කාඩ්පත මුද්‍රණය",
     printActions: "ක්‍රියා කාඩ්පත මුද්‍රණය",
     replayAudio: "නැවත ශ්‍රවණය කරන්න",
+    listenAgain: "නැවත ශ්‍රවණය කරන්න",
     muteAudio: "ශ්‍රව්‍යය නිශ්ශබ්ද",
     unmuteAudio: "ශ්‍රව්‍යය ශ්‍රවණය",
     speaking: "කතා කරමින්…",
@@ -464,6 +467,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     printResult: "சோதனை அட்டை அச்சிடு",
     printActions: "நடவடிக்கை அட்டை அச்சிடு",
     replayAudio: "மீண்டும் கேளுங்கள்",
+    listenAgain: "மீண்டும் கேளுங்கள்",
     muteAudio: "ஒலி முடக்கு",
     unmuteAudio: "ஒலி திற",
     speaking: "பேசுகிறது…",
@@ -575,6 +579,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     printResult: "ट्राइएज कार्ड प्रिंट करें",
     printActions: "एक्शन कार्ड प्रिंट करें",
     replayAudio: "फिर से सुनें",
+    listenAgain: "फिर से सुनें",
     speaking: "बोल रहा है…",
     messageDelivered: "संदेश दिया गया",
     tapToHear: "परिणाम सुनने के लिए टैप करें",

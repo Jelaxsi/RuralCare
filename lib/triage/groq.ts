@@ -4,45 +4,47 @@ import type { Confidence, EstimatedTimeToCare, Priority, TriageResult } from "..
 
 export const GROQ_MODEL = "llama-3.3-70b-versatile";
 
-const TRIAGE_ASSISTANT = `You are an emergency medical triage assistant.
-The patient's symptoms may be in Tamil, Sinhala, Hindi, Bengali, Marathi, Punjabi, Kannada, or English.
-Understand symptoms in ANY language including Tamil, Sinhala, Hindi, Bengali, Marathi, Punjabi, Kannada.
-Translate internally. ALWAYS produce a triage result.
-Never say you cannot analyze. If input is unclear, default to P3 with best-guess assessment.
-Always respond with valid JSON only.`;
-
-function buildLanguageInstruction(language: string): string {
-  const lang = normalizeGroqLanguage(language);
-  const critical =
-    lang !== "english"
-      ? `CRITICAL: You MUST respond entirely in ${lang}. Every field — reason, what_is_happening, follow_up, and clinical_reasoning — must be written in ${lang} script. Not English.`
-      : "Respond in English.";
-
-  return `${critical}
-If language is "tamil": write in தமிழ் script only.
-If language is "sinhala": write in සිංහල script only.
-If language is "hindi": write in हिन्दी script only.
-If language is "bengali": write in বাংলা script only.
-If language is "marathi": write in मराठी script only.
-If language is "english": write in English only.
-Never write in English if language is not english.`;
+function normalizeGroqLanguage(language: string): string {
+  return normalizeGroqLanguageInput(language);
 }
 
-const CRITICAL_TRIAGE_RULES = `CRITICAL TRIAGE RULES — NEVER VIOLATE:
-1. ANY breathing difficulty = P1 immediately
-2. ANY chest pain or pressure = P1 immediately
-3. ANY left arm or jaw pain = P1 (cardiac)
-4. ANY loss of consciousness = P1 immediately
-5. ANY seizure or convulsion = P1 immediately
-6. ANY stroke signs (face drooping, arm weakness, slurred speech) = P1 immediately
-7. When in doubt between P2 and P1 → always choose P1
-8. A missed P1 kills. A false P1 alarm is acceptable.
+export function buildSystemPrompt(language: string): string {
+  const lang = normalizeGroqLanguage(language);
 
-These rules apply regardless of language used.`;
+  return `You are an expert emergency medical triage AI for rural South Asia.
 
-const PHYSICIAN_BASE = `You are a senior emergency physician triaging patients in rural South Asia.
-NEVER under-triage. When unsure between P2 and P1, choose P1.
-Respond ONLY with valid JSON. Be concise. Max 2-3 sentences per field.`;
+LANGUAGE: Detect input language automatically.
+Respond ENTIRELY in: ${lang}.
+ALL fields must be in ${lang} — never mix languages.
+
+CRITICAL TRIAGE RULES — never violate:
+- Difficulty breathing → ALWAYS P1
+- Chest pain → ALWAYS P1
+- Unconscious / not responding → ALWAYS P1
+- Heavy bleeding → ALWAYS P1
+- Suspected heart attack or stroke → ALWAYS P1
+- Seizure → ALWAYS P1
+- High fever in infant under 2 → P2 minimum
+- When in doubt → higher priority, not lower
+- NEVER return "unable to analyze" — always triage
+
+PRIORITY LEVELS:
+P1 = Life threatening, call emergency NOW
+P2 = Urgent, see doctor within 2-4 hours
+P3 = Non-urgent, monitor or clinic visit
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "priority": "P1" | "P2" | "P3",
+  "reason": "one clear sentence summary in ${lang}",
+  "what_is_happening": "explanation in ${lang}",
+  "follow_up_care": "next steps in ${lang}",
+  "medical_reasoning": "clinical reasoning in ${lang}",
+  "call_emergency": true | false,
+  "time_to_care": "immediate" | "2-4 hours" | "24 hours",
+  "confidence": "high" | "medium" | "low"
+}`;
+}
 
 type FallbackCopy = {
   likely_condition: string;
@@ -97,20 +99,6 @@ const FALLBACK_BY_LANG: Record<string, FallbackCopy> = {
     do_not_do: ["तेजी से बिढ़ते लक्षणों को नज़रअंदाज़ न करें"],
   },
 };
-
-function normalizeGroqLanguage(language: string): string {
-  return normalizeGroqLanguageInput(language);
-}
-
-export function buildSystemPrompt(language: string): string {
-  return `${TRIAGE_ASSISTANT}
-
-${buildLanguageInstruction(language)}
-
-${CRITICAL_TRIAGE_RULES}
-
-${PHYSICIAN_BASE}`;
-}
 
 export function buildTriageFallback(transcript: string, language: string): TriageResult {
   const lang = normalizeGroqLanguage(language);
@@ -200,19 +188,19 @@ export function normalizeResult(parsed: Record<string, unknown>): TriageResult {
     ? parsed.confidence
     : "low") as Confidence;
 
-  const timeOptions: EstimatedTimeToCare[] = [
-    "immediately",
-    "within 1 hour",
-    "within 4 hours",
-    "within 24 hours",
-  ];
-  const estimated = timeOptions.includes(parsed.estimated_time_to_care as EstimatedTimeToCare)
-    ? (parsed.estimated_time_to_care as EstimatedTimeToCare)
-    : priority === "P1"
-      ? "immediately"
-      : priority === "P2"
-        ? "within 4 hours"
-        : "within 24 hours";
+  const timeRaw = String(parsed.time_to_care ?? parsed.estimated_time_to_care ?? "").toLowerCase();
+  const timeMap: Record<string, EstimatedTimeToCare> = {
+    immediate: "immediately",
+    immediately: "immediately",
+    "2-4 hours": "within 4 hours",
+    "within 1 hour": "within 1 hour",
+    "within 4 hours": "within 4 hours",
+    "24 hours": "within 24 hours",
+    "within 24 hours": "within 24 hours",
+  };
+  const estimated =
+    timeMap[timeRaw] ??
+    (priority === "P1" ? "immediately" : priority === "P2" ? "within 4 hours" : "within 24 hours");
 
   const emergencyNum =
     parsed.emergency_number === "1990" || parsed.emergency_number === "119"
@@ -263,7 +251,7 @@ export async function createTriageCompletionStream(params: GroqTriageParams) {
 
   return client.chat.completions.create({
     model: GROQ_MODEL,
-    max_tokens: 250,
+    max_tokens: 400,
     temperature: 0.1,
     stream: true,
     response_format: { type: "json_object" },
@@ -285,7 +273,7 @@ async function callGroqOnce(
   const response = await client.chat.completions.create(
     {
       model: GROQ_MODEL,
-      max_tokens: 250,
+      max_tokens: 400,
       temperature: 0.1,
       response_format: { type: "json_object" },
       messages: [

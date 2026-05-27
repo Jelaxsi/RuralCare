@@ -4,16 +4,10 @@ import OpenAI from "openai";
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as { text?: string; language?: string };
-    const { text, language = "en" } = body;
-
-    console.log("[TTS] Request received:", {
-      text: text?.substring(0, 50),
-      language,
-    });
+    const { text } = body;
 
     if (!text || text.trim().length < 2) {
-      console.log("[TTS] Skipping — text too short");
-      return new Response(null, { status: 204 });
+      return new NextResponse(null, { status: 204 });
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
@@ -27,20 +21,20 @@ export async function POST(req: Request) {
       voice: "nova",
       input: text.trim().substring(0, 150),
       speed: 1.0,
+      response_format: "mp3",
     });
 
-    return new NextResponse(response.body, {
+    const buffer = await response.arrayBuffer();
+
+    return new NextResponse(buffer, {
       headers: {
         "Content-Type": "audio/mpeg",
-        "Transfer-Encoding": "chunked",
+        "Content-Length": buffer.byteLength.toString(),
         "Cache-Control": "no-cache",
       },
     });
-  } catch (error) {
-    console.error("[TTS] Error:", error);
-    return NextResponse.json(
-      { error: "TTS failed", details: String(error) },
-      { status: 500 },
-    );
+  } catch (err) {
+    console.error("[TTS API]", err);
+    return NextResponse.json({ error: "TTS failed" }, { status: 500 });
   }
 }
