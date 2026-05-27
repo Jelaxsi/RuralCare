@@ -1,10 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
+import { DashboardErrorState } from "@/components/dashboard/DashboardErrorState";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { ThemeToggle } from "@/components/SystemStatus";
+import {
+  collectP1Ids,
+  findNewP1Cases,
+  formatP1AlertLabel,
+  playP1Beep,
+} from "@/lib/dashboard/p1-alert";
 import { WARD_OPTIONS, hospitalConfig } from "@/lib/hospital/config";
 import { useSavedLanguage } from "@/lib/i18n/useSavedLanguage";
 import type { CaseRecord, Priority, Shift } from "@/lib/types";
@@ -28,6 +36,14 @@ function formatTime(ts: string) {
   } catch {
     return ts;
   }
+}
+
+function formatClockTime(date: Date, withSeconds = false) {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: withSeconds ? "2-digit" : undefined,
+  }).format(date);
 }
 
 function isSameDay(a: Date, b: Date) {
@@ -55,32 +71,87 @@ export default function DashboardPage() {
   const [sortMode, setSortMode] = useState<SortMode>("NEWEST");
   const [sortCol, setSortCol] = useState<string>("timestamp");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCase, setSelectedCase] = useState<CaseRecord | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [panelOpen, setPanelOpen] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [syncFailed, setSyncFailed] = useState(false);
+  const [refreshWarningDismissed, setRefreshWarningDismissed] = useState(false);
+  const [syncAnimating, setSyncAnimating] = useState(false);
+  const [p1AlertPulse, setP1AlertPulse] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const hasLoadedOnceRef = useRef(false);
+  const prevP1IdsRef = useRef<Set<string>>(new Set());
+
+  const activeP1Count = useMemo(
+    () => cases.filter((c) => c.priority === "P1" && !c.resolved).length,
+    [cases],
+  );
+
+  const triggerP1Alert = useCallback(
+    (newCases: CaseRecord[]) => {
+      if (!newCases.length) return;
+      const label = formatP1AlertLabel(newCases[0]);
+      setP1AlertPulse(true);
+      playP1Beep();
+      setToast(`🚨 ${t.dashNewP1Case}: ${label}`);
+      window.setTimeout(() => setP1AlertPulse(false), 1800);
+      window.setTimeout(() => setToast(null), 6000);
+    },
+    [t.dashNewP1Case],
+  );
 
   const load = useCallback(async () => {
     try {
       const res = await fetch("/api/cases", { cache: "no-store" });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
       const data = (await res.json()) as CaseRecord[];
-      setCases(Array.isArray(data) ? data : []);
+      const nextCases = Array.isArray(data) ? data : [];
+
+      if (hasLoadedOnceRef.current) {
+        const newP1 = findNewP1Cases(prevP1IdsRef.current, nextCases);
+        if (newP1.length) triggerP1Alert(newP1);
+      }
+
+      prevP1IdsRef.current = collectP1Ids(nextCases);
+      hasLoadedOnceRef.current = true;
+
+      setCases(nextCases);
       setError(null);
-    } catch {
-      setCases([]);
-      setError(null);
+      setSyncFailed(false);
+      setRefreshWarningDismissed(false);
+      setLastUpdated(new Date());
+      setSyncAnimating(true);
+      window.setTimeout(() => setSyncAnimating(false), 800);
+    } catch (err) {
+      console.error("[Dashboard] Failed to load cases:", err);
+      setError(t.dashLoadFailed);
+      setSyncFailed(true);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
-  }, []);
+  }, [t.dashLoadFailed, triggerP1Alert]);
 
   useEffect(() => {
     void load();
-    const id = window.setInterval(load, 30_000);
+    const id = window.setInterval(() => void load(), 30_000);
     return () => window.clearInterval(id);
   }, [load]);
+
+  useEffect(() => {
+    document.title =
+      activeP1Count > 0
+        ? `(${activeP1Count} P1 Active) — RuralCare`
+        : "Live Triage Dashboard — RuralCare";
+    return () => {
+      document.title = "RuralCare — Emergency Health Triage";
+    };
+  }, [activeP1Count]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -145,7 +216,7 @@ export default function DashboardPage() {
   };
 
   const exportCsv = useCallback(() => {
-    const rows = (selectedIds.size ? filtered.filter((c) => selectedIds.has(c.id)) : filtered);
+    const rows = selectedIds.size ? filtered.filter((c) => selectedIds.has(c.id)) : filtered;
     const headers = ["ID", "PatientID", "Name", "Age", "Gender", "Location", "Ward", "Priority", "Condition", "Timestamp"];
     const esc = (v: string) => `"${(v ?? "").replace(/"/g, '""')}"`;
     const csv = [
@@ -207,27 +278,71 @@ export default function DashboardPage() {
     setPanelOpen(true);
   };
 
+  const syncLabel = lastUpdated
+    ? `${syncFailed ? "🔴" : "🟢"} ${t.dashNavLive} · ${t.dashNavLastSync}: ${formatClockTime(lastUpdated)}`
+    : `${syncFailed ? "🔴" : "🟢"} ${t.dashNavLive}`;
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-[#050A14] dark:text-white">
       <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-md dark:border-white/[0.07] dark:bg-white/[0.03]">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-8">
-          <Link href="/" className="flex items-center gap-3 transition hover:opacity-90" aria-label="Back to RuralCare home">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 md:px-8">
+          <Link href="/" className="flex items-center gap-3 transition hover:opacity-90" aria-label="RuralCare home">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 text-lg font-bold text-white">
               +
             </div>
-            <div>
-              <p className="font-bold text-text-primary">RuralCare</p>
-              <p className="text-sm text-text-muted">{t.dashboardHome}</p>
-            </div>
+            <span className="text-lg font-bold text-text-primary">RuralCare</span>
           </Link>
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-wrap items-center gap-3 md:gap-5">
+            <span className="text-sm text-text-muted" aria-live="polite">
+              {syncLabel}
+            </span>
+            <nav className="flex items-center gap-1" aria-label="Main navigation">
+              <Link
+                href="/"
+                className="dash-focus-ring rounded-md px-3 py-2 text-sm font-medium text-text-secondary transition hover:text-text-primary"
+              >
+                {t.dashboardTriageLink}
+              </Link>
+              <Link
+                href="/dashboard"
+                aria-current="page"
+                className="dash-focus-ring rounded-md border-b-2 border-[#7c3aed] px-3 py-2 text-sm font-semibold text-[#7c3aed]"
+              >
+                {t.dashNavDashboard}
+              </Link>
+            </nav>
             <ThemeToggle translationLang={langOption.translationKey} />
-            <Link href="/" className="btn-secondary py-2 text-sm">
-              {t.dashboardTriageLink}
-            </Link>
           </div>
         </div>
       </header>
+
+      {syncFailed && !refreshWarningDismissed && (
+        <div
+          role="alert"
+          className="border-b border-amber-300/50 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
+        >
+          <span>⚠ {t.dashRefreshFailed}</span>
+          <button
+            type="button"
+            onClick={() => setRefreshWarningDismissed(true)}
+            className="dash-focus-ring ml-3 rounded px-2 py-0.5 text-xs font-semibold underline"
+            aria-label="Dismiss refresh warning"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {toast && (
+        <div
+          role="status"
+          aria-live="assertive"
+          className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800 shadow-lg dark:border-red-500/40 dark:bg-red-950 dark:text-red-200"
+        >
+          {toast}
+        </div>
+      )}
 
       <main className="mx-auto max-w-7xl px-4 py-8 md:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -236,7 +351,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setShift("ALL")}
-              className={`rounded-md px-3 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:px-4 ${
+              className={`dash-focus-ring rounded-md px-3 py-2 text-sm font-semibold sm:px-4 ${
                 shift === "ALL" ? "dash-filter-active" : "dash-filter-inactive"
               }`}
             >
@@ -247,7 +362,7 @@ export default function DashboardPage() {
                 key={s}
                 type="button"
                 onClick={() => setShift(s)}
-                className={`rounded-md px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                className={`dash-focus-ring rounded-md px-4 py-2 text-sm font-semibold ${
                   shift === s ? "dash-filter-active" : "dash-filter-inactive"
                 }`}
               >
@@ -259,7 +374,7 @@ export default function DashboardPage() {
 
         <section className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-5">
           <KpiCard title={t.dashTotalToday} value={stats.totalToday} />
-          <KpiCard title={t.dashP1} value={stats.p1} accent="text-p1-rose" />
+          <KpiCard title={t.dashP1} value={stats.p1} accent="text-p1-rose" alertPulse={p1AlertPulse} />
           <KpiCard title={t.dashP2} value={stats.p2} accent="text-p2-amber" />
           <KpiCard title={t.dashP3} value={stats.p3} accent="text-p3-emerald" />
           <KpiCard title={t.dashAvgResponse} value={stats.avgResponse} isText />
@@ -273,14 +388,14 @@ export default function DashboardPage() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t.dashSearchPlaceholder}
               aria-label="Search cases"
-              className="input-field lg:max-w-md"
+              className="dash-focus-ring input-field lg:max-w-md"
             />
             <div className="flex flex-wrap gap-2">
               <select
                 value={wardFilter}
                 onChange={(e) => setWardFilter(e.target.value)}
                 aria-label="Filter by ward"
-                className="input-field w-auto"
+                className="dash-focus-ring input-field w-auto"
               >
                 <option value="">{t.dashAllWards}</option>
                 {WARD_OPTIONS.map((w) => (
@@ -293,25 +408,36 @@ export default function DashboardPage() {
                 value={sortMode}
                 onChange={(e) => setSortMode(e.target.value as SortMode)}
                 aria-label="Sort cases"
-                className="input-field w-auto"
+                className="dash-focus-ring input-field w-auto"
               >
                 <option value="NEWEST">{t.dashSortNewest}</option>
                 <option value="OLDEST">{t.dashSortOldest}</option>
                 <option value="P1_FIRST">{t.dashSortP1First}</option>
                 <option value="P3_FIRST">{t.dashSortP3First}</option>
               </select>
-              <button type="button" onClick={exportCsv} className="btn-secondary py-2 text-sm">
+              <button
+                type="button"
+                onClick={exportCsv}
+                aria-label={t.dashExportCsv}
+                className="dash-focus-ring btn-secondary py-2 text-sm"
+              >
                 {t.dashExportCsv}
               </button>
               <button
                 type="button"
                 onClick={() => void markResolved()}
                 disabled={!selectedIds.size}
-                className="btn-secondary py-2 text-sm disabled:opacity-50"
+                aria-label={`${t.dashMarkResolved}, ${selectedIds.size} selected`}
+                className="dash-focus-ring btn-secondary py-2 text-sm disabled:opacity-50"
               >
                 {t.dashMarkResolved} ({selectedIds.size})
               </button>
-              <button type="button" onClick={printShiftReport} className="btn-primary py-2 text-sm">
+              <button
+                type="button"
+                onClick={printShiftReport}
+                aria-label={t.dashPrintReport}
+                className="dash-focus-ring btn-primary py-2 text-sm"
+              >
                 {t.dashPrintReport}
               </button>
             </div>
@@ -323,7 +449,7 @@ export default function DashboardPage() {
                 key={f}
                 type="button"
                 onClick={() => setFilter(f)}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                className={`dash-focus-ring rounded-lg px-4 py-2 text-sm font-semibold ${
                   filter === f ? "dash-filter-active" : "dash-filter-inactive"
                 }`}
               >
@@ -338,21 +464,44 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          <div className="mt-6 overflow-x-auto rounded-xl border border-border">
-            {loading ? (
+          <div
+            className="mt-6 overflow-x-auto rounded-xl border border-border"
+            role="status"
+            aria-live="polite"
+            aria-label="Case list"
+          >
+            {initialLoading ? (
               <DashboardSkeleton />
-            ) : error ? (
-              <div className="p-12 text-center text-p1-rose">{error}</div>
+            ) : error && cases.length === 0 ? (
+              <DashboardErrorState
+                message={t.dashLoadFailed}
+                retryLabel={t.dashRetryNow}
+                onRetry={() => {
+                  setInitialLoading(true);
+                  void load();
+                }}
+              />
+            ) : cases.length === 0 ? (
+              <DashboardEmptyState heading={t.dashEmptyHeading} subtext={t.dashEmptySubtext} />
             ) : filtered.length === 0 ? (
-              <div className="p-12 text-center text-text-muted">
-                {cases.length === 0 ? t.dashNoCases : t.dashNoMatch}
-              </div>
+              <div className="p-12 text-center text-text-muted">{t.dashNoMatch}</div>
             ) : (
               <table className="min-w-[900px] w-full text-left text-base">
                 <thead className="border-b border-border bg-surface-muted text-sm uppercase tracking-wider text-text-muted">
                   <tr>
-                    <th className="px-4 py-3"><span className="sr-only">Select</span></th>
-                    <SortableTh label={t.dashColPatient} col="name" sortCol={sortCol} sortDir={sortDir} onSort={(c, d) => { setSortCol(c); setSortDir(d); }} />
+                    <th className="px-4 py-3">
+                      <span className="sr-only">Select</span>
+                    </th>
+                    <SortableTh
+                      label={t.dashColPatient}
+                      col="name"
+                      sortCol={sortCol}
+                      sortDir={sortDir}
+                      onSort={(c, d) => {
+                        setSortCol(c);
+                        setSortDir(d);
+                      }}
+                    />
                     <th className="px-4 py-3">{t.dashColLocation}</th>
                     <th className="px-4 py-3">{t.dashColWard}</th>
                     <th className="px-4 py-3">{t.dashColPriority}</th>
@@ -379,11 +528,15 @@ export default function DashboardPage() {
                           checked={selectedIds.has(row.id)}
                           onChange={() => toggleSelect(row.id)}
                           aria-label={`Select case ${row.name}`}
-                          className="h-4 w-4 rounded border-border text-brand focus:ring-brand"
+                          className="dash-focus-ring h-4 w-4 rounded border-border text-brand focus:ring-brand"
                         />
                       </td>
                       <td className="px-4 py-3 font-medium text-text-primary">
-                        <Link href={`/history/${encodeURIComponent(row.id)}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand">
+                        <Link
+                          href={`/history/${encodeURIComponent(row.id)}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="hover:text-brand"
+                        >
                           {row.name}
                         </Link>
                         <span className="ml-2 text-xs text-text-muted">{row.patientId}</span>
@@ -401,7 +554,24 @@ export default function DashboardPage() {
               </table>
             )}
           </div>
-          <p className="mt-3 text-sm text-text-muted">{t.dashAutoRefresh}</p>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-text-muted">
+            <span
+              className={`inline-flex items-center gap-1.5 ${syncAnimating ? "dash-sync-spin" : ""}`}
+              aria-hidden={!syncAnimating}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12a9 9 0 1 1-3-6.7" strokeLinecap="round" />
+                <path d="M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <span>{t.dashAutoRefresh}</span>
+            {lastUpdated && (
+              <span aria-live="polite">
+                · {t.dashLastUpdated}: {formatClockTime(lastUpdated, true)}
+              </span>
+            )}
+          </div>
         </section>
       </main>
 
@@ -419,12 +589,12 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setPanelOpen(false)}
                 aria-label="Close panel"
-                className="rounded-lg border border-border p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                className="dash-focus-ring rounded-lg border border-border p-2"
               >
                 ✕
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 space-y-4 overflow-y-auto p-4">
               <PriorityBadge priority={selectedCase.priority} t={t} />
               <Detail label="Patient ID" value={selectedCase.patientId} />
               <Detail label="Condition" value={selectedCase.likely_condition} />
@@ -434,7 +604,9 @@ export default function DashboardPage() {
               <Detail label="Hospital" value={selectedCase.hospital} />
               <div>
                 <p className="text-sm font-semibold text-text-muted">Transcript</p>
-                <p className="mt-1 rounded-lg border border-border bg-surface-muted p-3 text-base text-text-primary">{selectedCase.transcript}</p>
+                <p className="mt-1 rounded-lg border border-border bg-surface-muted p-3 text-base text-text-primary">
+                  {selectedCase.transcript}
+                </p>
               </div>
               <Detail label="Reason" value={selectedCase.reason} />
               <Detail label="Time" value={new Date(selectedCase.timestamp).toLocaleString()} />
@@ -446,11 +618,25 @@ export default function DashboardPage() {
   );
 }
 
-function KpiCard({ title, value, accent = "", isText = false }: { title: string; value: number | string; accent?: string; isText?: boolean }) {
+function KpiCard({
+  title,
+  value,
+  accent = "",
+  isText = false,
+  alertPulse = false,
+}: {
+  title: string;
+  value: number | string;
+  accent?: string;
+  isText?: boolean;
+  alertPulse?: boolean;
+}) {
   return (
-    <div className="clinical-card">
+    <div className={`clinical-card border border-transparent ${alertPulse ? "dash-kpi-p1-alert border-red-400/50" : ""}`}>
       <p className="text-sm font-medium text-text-muted">{title}</p>
-      <p className={`mt-2 ${isText ? "text-2xl" : "text-3xl"} font-bold tabular-nums ${accent || "text-text-primary"}`}>{value}</p>
+      <p className={`mt-2 ${isText ? "text-2xl" : "text-3xl"} font-bold tabular-nums ${accent || "text-text-primary"}`}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -482,7 +668,7 @@ function SortableTh({
       <button
         type="button"
         onClick={() => onSort(col, sortCol === col && sortDir === "asc" ? "desc" : "asc")}
-        className="font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="dash-focus-ring font-semibold"
       >
         {label} {sortCol === col ? (sortDir === "asc" ? "↑" : "↓") : ""}
       </button>

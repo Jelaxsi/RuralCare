@@ -100,6 +100,16 @@ export const MARKETING_OVERRIDES: Partial<Record<TranslationLanguage, Partial<Tr
     printDoctorSign: "Doctor signature: _______________________",
     slowAnalysisHint:
       "Analysis taking longer than usual — please wait or type symptoms manually",
+    dashEmptyHeading: "No cases yet for this shift",
+    dashEmptySubtext: "Cases will appear here as patients are triaged",
+    dashLastUpdated: "Last updated",
+    dashRefreshFailed: "Could not refresh — retrying in 30s",
+    dashLoadFailed: "Failed to load cases",
+    dashRetryNow: "Retry now",
+    dashNavLive: "Live",
+    dashNavLastSync: "Last sync",
+    dashNavDashboard: "Dashboard",
+    dashNewP1Case: "New P1 case",
   },
   tamil: {
     aboutTitle: "RuralCare பற்றி",

@@ -224,6 +224,16 @@ export type TranslationKeys = {
   printDoctorSign: string;
   slowAnalysisHint: string;
   offlineMessage: string;
+  dashEmptyHeading: string;
+  dashEmptySubtext: string;
+  dashLastUpdated: string;
+  dashRefreshFailed: string;
+  dashLoadFailed: string;
+  dashRetryNow: string;
+  dashNavLive: string;
+  dashNavLastSync: string;
+  dashNavDashboard: string;
+  dashNewP1Case: string;
 };
 
 const en: TranslationKeys = {
@@ -454,6 +464,16 @@ const en: TranslationKeys = {
   printDoctorSign: "Doctor signature: _______________________",
   slowAnalysisHint: "Analysis taking longer than usual — please wait or type symptoms manually",
   offlineMessage: "You are offline — voice analysis requires internet connection",
+  dashEmptyHeading: "No cases yet for this shift",
+  dashEmptySubtext: "Cases will appear here as patients are triaged",
+  dashLastUpdated: "Last updated",
+  dashRefreshFailed: "Could not refresh — retrying in 30s",
+  dashLoadFailed: "Failed to load cases",
+  dashRetryNow: "Retry now",
+  dashNavLive: "Live",
+  dashNavLastSync: "Last sync",
+  dashNavDashboard: "Dashboard",
+  dashNewP1Case: "New P1 case",
 };
 
 export const translations: Record<TranslationLanguage, TranslationKeys> = {

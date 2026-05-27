@@ -12,15 +12,32 @@ export function PriorityBadge({
 }) {
   const config =
     priority === "P1"
-      ? { label: t.priorityCritical, bg: "bg-p1-rose", ring: "ring-p1-rose/30", text: "text-white" }
+      ? {
+          label: t.priorityCritical,
+          bg: size === "sm" ? "bg-red-600" : "bg-p1-rose",
+          ring: "ring-red-500/40",
+          text: "text-white",
+        }
       : priority === "P2"
-        ? { label: t.priorityUrgent, bg: "bg-p2-amber", ring: "ring-p2-amber/30", text: "text-white" }
-        : { label: t.priorityNonUrgent, bg: "bg-p3-emerald", ring: "ring-p3-emerald/30", text: "text-white" };
+        ? {
+            label: t.priorityUrgent,
+            bg: size === "sm" ? "bg-amber-600" : "bg-p2-amber",
+            ring: "ring-amber-500/40",
+            text: "text-white",
+          }
+        : {
+            label: t.priorityNonUrgent,
+            bg: size === "sm" ? "bg-emerald-700" : "bg-p3-emerald",
+            ring: "ring-emerald-500/40",
+            text: "text-white",
+          };
 
   if (size === "sm") {
     return (
       <span
         className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ring-1 ${config.bg} ${config.ring} ${config.text}`}
+        role="status"
+        aria-label={`${priority} ${config.label}`}
       >
         <AlertIcon priority={priority} />
         {priority} · {config.label}
