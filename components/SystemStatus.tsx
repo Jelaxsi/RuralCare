@@ -19,7 +19,11 @@ export function SystemStatus({ translationLang }: { translationLang: Translation
         const data = (await res.json()) as { status?: string };
         if (!cancelled) {
           setStatus(
-            data.status === "online" ? "online" : data.status === "degraded" ? "degraded" : "offline",
+            data.status === "ok" || data.status === "online"
+              ? "online"
+              : data.status === "degraded"
+                ? "degraded"
+                : "offline",
           );
         }
       } catch {
@@ -54,11 +58,7 @@ export function SystemStatus({ translationLang }: { translationLang: Translation
 
   return (
     <div
-      className="flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-sm"
-      style={{
-        borderColor: "var(--input-border)",
-        background: "var(--card-bg)",
-      }}
+      className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-100 px-3 py-1.5 backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.05]"
       role="status"
       aria-live="polite"
       aria-label={`System status: ${label}`}
@@ -72,7 +72,7 @@ export function SystemStatus({ translationLang }: { translationLang: Translation
         )}
         <span className={`relative inline-flex h-2 w-2 rounded-full ${dotClass}`} />
       </span>
-      <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{label}</span>
+      <span className="text-xs font-medium text-gray-600 dark:text-white/70">{label}</span>
     </div>
   );
 }

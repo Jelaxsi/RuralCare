@@ -35,23 +35,20 @@ export function LanguageSelector({
     : LANGUAGE_OPTIONS;
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative max-w-[min(100vw-8rem,280px)]">
       <button
         type="button"
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={`${t.preferredLanguage}: ${selected.label}`}
         onClick={() => setOpen((o) => !o)}
-        className="flex min-w-[200px] items-center justify-between gap-2 rounded-full border px-4 py-2.5 text-base backdrop-blur-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        style={{
-          borderColor: "var(--input-border)",
-          background: "var(--card-bg)",
-          color: "var(--text-body)",
-        }}
+        className="flex w-full min-w-0 items-center justify-between gap-2 rounded-full border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 backdrop-blur-md transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:hover:bg-white/[0.08] sm:px-4 sm:text-base"
       >
-        <span className="flex items-center gap-2">
-          <span aria-hidden>{selected.flag}</span>
-          <span>{selected.label}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0" aria-hidden>
+            {selected.flag}
+          </span>
+          <span className="max-w-[200px] truncate">{selected.label}</span>
         </span>
         <ChevronIcon open={open} />
       </button>
@@ -60,16 +57,16 @@ export function LanguageSelector({
         <div
           role="listbox"
           aria-label={t.preferredLanguage}
-          className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-white/10 bg-[#0d1117]/95 shadow-xl backdrop-blur-xl"
+          className="absolute right-0 z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-[#0d1117]/95"
         >
-          <div className="border-b border-border p-2">
+          <div className="border-b border-gray-200 p-2 dark:border-white/10">
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t.searchLanguage}
               aria-label={t.searchLanguage}
-              className="w-full rounded-lg border border-border bg-surface-light px-3 py-2 text-base text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-surface-dark"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-white/10 dark:bg-[#121826] dark:text-white dark:placeholder-white/30"
             />
           </div>
           <div className="max-h-72 overflow-y-auto p-2">
@@ -78,7 +75,7 @@ export function LanguageSelector({
               if (!items.length) return null;
               return (
                 <div key={group.id} className="mb-2">
-                  <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-muted">
+                  <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-white/50">
                     {group.flag} {group.label}
                   </div>
                   {items.map((opt) => (
@@ -121,7 +118,7 @@ function LanguageOptionButton({
       className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-base transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
         selected
           ? "bg-brand/10 font-semibold text-brand dark:bg-brand/20"
-          : "text-text-primary hover:bg-surface-muted"
+          : "text-gray-900 hover:bg-gray-100 dark:text-white dark:hover:bg-white/[0.06]"
       }`}
     >
       <span aria-hidden>{option.flag}</span>
@@ -140,7 +137,7 @@ function ChevronIcon({ open }: { open: boolean }) {
       stroke="currentColor"
       strokeWidth="2"
       aria-hidden
-      className={`text-text-muted transition ${open ? "rotate-180" : ""}`}
+      className={`shrink-0 text-gray-500 transition dark:text-white/50 ${open ? "rotate-180" : ""}`}
     >
       <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>

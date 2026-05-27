@@ -66,7 +66,8 @@ export default function DashboardPage() {
       setCases(Array.isArray(data) ? data : []);
       setError(null);
     } catch {
-      setError("Unable to refresh cases.");
+      setCases([]);
+      setError(null);
     } finally {
       setLoading(false);
     }
@@ -204,8 +205,8 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-light text-text-primary dark:bg-surface-dark">
-      <header className="sticky top-0 z-40 border-b border-border bg-surface-card/95 backdrop-blur-md">
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-[#050A14] dark:text-white">
+      <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-md dark:border-white/[0.07] dark:bg-white/[0.03]">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-8">
           <Link href="/" className="flex items-center gap-3 transition hover:opacity-90" aria-label="Back to RuralCare home">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 text-lg font-bold text-white">
@@ -233,7 +234,7 @@ export default function DashboardPage() {
               type="button"
               onClick={() => setShift("ALL")}
               className={`rounded-md px-3 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:px-4 ${
-                shift === "ALL" ? "bg-brand text-white" : "text-text-secondary hover:bg-surface-muted"
+                shift === "ALL" ? "dash-filter-active" : "dash-filter-inactive"
               }`}
             >
               All
@@ -244,7 +245,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setShift(s)}
                 className={`rounded-md px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                  shift === s ? "bg-brand text-white" : "text-text-secondary hover:bg-surface-muted"
+                  shift === s ? "dash-filter-active" : "dash-filter-inactive"
                 }`}
               >
                 {shiftLabel(s)}
@@ -320,7 +321,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setFilter(f)}
                 className={`rounded-lg px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                  filter === f ? "bg-brand text-white" : "border border-border text-text-secondary"
+                  filter === f ? "dash-filter-active" : "dash-filter-inactive"
                 }`}
               >
                 {f === "ALL" ? "All" : f === "TODAY" ? "Today" : f === "WEEK" ? "This week" : f}
@@ -355,7 +356,7 @@ export default function DashboardPage() {
                     <tr
                       key={row.id}
                       onClick={() => openCase(row)}
-                      className={`cursor-pointer border-b border-border transition hover:bg-surface-muted ${
+                      className={`cursor-pointer border-b border-gray-200 bg-white transition hover:bg-gray-50 dark:border-white/[0.07] dark:bg-transparent dark:hover:bg-white/[0.03] ${
                         row.priority === "P1"
                           ? "bg-p1-rose/5"
                           : row.priority === "P2"

@@ -805,7 +805,7 @@ export default function TriagePage() {
           <>
             <section className="hero-section">
               <h1 className="hero-title">{t.title}</h1>
-              <p className="mx-auto max-w-md text-base hero-subtitle">{t.subtitle}</p>
+              <p className="mx-auto max-w-md text-base text-gray-500 dark:text-white/50">{t.subtitle}</p>
             </section>
 
             <div className="mx-4 mb-6">
@@ -817,7 +817,9 @@ export default function TriagePage() {
               </p>
               <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 font-mono text-xs text-violet-300">
                 <span>{t.patientIdLabel}:</span>
-                <span suppressHydrationWarning>{patientId || "--------"}</span>
+                <span suppressHydrationWarning>
+                  {patientId ? patientId : <span className="opacity-0">LOADING</span>}
+                </span>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -865,7 +867,7 @@ export default function TriagePage() {
                       type="button"
                       onClick={() => void detectLocation()}
                       disabled={locating}
-                      className="shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-white/70 transition hover:bg-white/10 disabled:opacity-50"
+                      className="shrink-0 rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-xs text-gray-700 transition hover:bg-gray-200 disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-white/70 dark:hover:bg-white/10"
                     >
                       {locating ? t.locationDetecting : t.detectLocation}
                     </button>
@@ -896,7 +898,7 @@ export default function TriagePage() {
                   >
                     <MicIcon size={32} />
                   </button>
-                  <p className="mt-2 text-sm text-white/40">{t.startBtn}</p>
+                  <p className="mt-2 text-sm text-gray-400 dark:text-white/40">{t.startBtn}</p>
                 </div>
               )}
 
@@ -914,7 +916,7 @@ export default function TriagePage() {
                     </div>
                   </div>
                   <MicSoundWave active />
-                  <p className="mt-3 animate-pulse text-sm font-medium text-white/70">{t.listening}</p>
+                  <p className="mt-3 animate-pulse text-sm font-medium text-gray-700 dark:text-white/70">{t.listening}</p>
                   <button
                     type="button"
                     onClick={() => void stopAndAnalyze()}
@@ -950,9 +952,9 @@ export default function TriagePage() {
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MicIcon size={16} className="text-violet-400" />
-                  <span className="text-sm font-medium text-white/70">{t.transcriptTitle}</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-white/70">{t.transcriptTitle}</span>
                 </div>
-                <span className="text-xs text-white/30">
+                <span className="text-xs text-gray-400 dark:text-white/30">
                   {recording
                     ? `${t.listeningIn} ${GROQ_LANGUAGE_LABELS[languageOption.translationKey]}${sttBackend === "valsea" ? " · Valsea" : ""}`
                     : languageOption.label}
@@ -960,13 +962,13 @@ export default function TriagePage() {
               </div>
               <div className="min-h-[80px] text-sm leading-relaxed" aria-live="polite">
                 {!hasSpeech && !manualSymptoms && (
-                  <p className="py-4 text-center text-white/20">{t.transcriptWaiting}</p>
+                  <p className="py-4 text-center text-gray-300 dark:text-white/20">{t.transcriptWaiting}</p>
                 )}
                 {hasSpeech && (
                   <p>
-                    {finalTranscript && <span className="text-white">{finalTranscript}</span>}
+                    {finalTranscript && <span className="text-gray-900 dark:text-white">{finalTranscript}</span>}
                     {interimTranscript && (
-                      <span className="italic text-white/40">
+                      <span className="italic text-gray-400 dark:text-white/40">
                         {finalTranscript ? " " : ""}
                         {interimTranscript}
                       </span>
@@ -974,14 +976,14 @@ export default function TriagePage() {
                   </p>
                 )}
                 {!hasSpeech && manualSymptoms && (
-                  <p className="text-white">{manualSymptoms}</p>
+                  <p className="text-gray-900 dark:text-white">{manualSymptoms}</p>
                 )}
               </div>
             </section>
 
             {/* Manual input — always visible */}
             <section className="mx-4 mb-4">
-              <p className="mb-1.5 text-xs text-white/30">{t.manualInputHint}</p>
+              <p className="mb-1.5 text-xs text-gray-400 dark:text-white/30">{t.manualInputHint}</p>
               <textarea
                 value={manualSymptoms}
                 onChange={(e) => setManualSymptoms(e.target.value)}

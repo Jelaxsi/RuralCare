@@ -33,7 +33,7 @@ export default function QrPage() {
       <AppHeader right={<ThemeToggle translationLang="english" />} />
       <main className="mx-auto flex max-w-md flex-col items-center px-4 pb-10 pt-[calc(64px+32px)] text-center">
         <h1 className="hero-title mb-2">QR Access</h1>
-        <p className="mb-8 text-sm hero-subtitle">
+        <p className="mb-8 text-sm text-gray-500 dark:text-white/55">
           Scan to access RuralCare Emergency Triage. Print and post at clinics for quick patient access.
         </p>
 
@@ -41,7 +41,7 @@ export default function QrPage() {
           <QRCodeCanvas value={appUrl} size={220} level="M" includeMargin />
         </div>
 
-        <p className="mt-4 break-all text-xs text-theme-subtle">{appUrl}</p>
+        <p className="mt-4 break-all text-xs text-gray-400 dark:text-white/40">{appUrl}</p>
 
         <button
           type="button"

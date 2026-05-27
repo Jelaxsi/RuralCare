@@ -6,8 +6,8 @@ type Props = {
 
 export function EmergencyContacts({ t }: Props) {
   return (
-    <div className="mx-4 rounded-2xl border-2 border-red-500 bg-gradient-to-b from-red-600/30 to-red-900/20 p-5 shadow-lg shadow-red-500/30 p1-border-pulse">
-      <p className="mb-4 text-center text-xl font-black uppercase tracking-wide text-red-100">
+    <div className="mx-4 rounded-2xl border-2 border-red-300 bg-red-50 p-5 shadow-sm dark:border-red-500/30 dark:bg-red-500/10 dark:shadow-lg dark:shadow-red-500/20 pulse-red">
+      <p className="mb-4 text-center text-xl font-black uppercase tracking-wide text-red-800 dark:text-red-300">
         🚨 {t.callEmergencyNow}
       </p>
       <div className="flex flex-col gap-3">

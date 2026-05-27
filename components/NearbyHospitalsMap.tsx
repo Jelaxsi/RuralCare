@@ -4,6 +4,8 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { facilityByLocation } from "@/lib/facilities/lookup";
 import { formatDistance, type OsmHospital } from "@/lib/osm/geocoding";
+import type { TranslationKeys } from "@/lib/i18n/translations";
+import type { Priority } from "@/lib/types";
 
 async function loadNearbyHospitals(lat: number, lng: number): Promise<OsmHospital[]> {
   const res = await fetch(`/api/osm/hospitals?lat=${lat}&lon=${lng}`);
@@ -11,13 +13,11 @@ async function loadNearbyHospitals(lat: number, lng: number): Promise<OsmHospita
   const data = (await res.json()) as { hospitals?: OsmHospital[] };
   return data.hospitals ?? [];
 }
-import type { TranslationKeys } from "@/lib/i18n/translations";
-import type { Priority } from "@/lib/types";
 
 const OsmMapInner = dynamic(() => import("./OsmMapInner"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[400px] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.02] text-white/50">
+    <div className="flex h-[400px] items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 text-gray-500 dark:border-white/10 dark:bg-white/[0.02] dark:text-white/50">
       Loading map…
     </div>
   ),
@@ -62,16 +62,16 @@ export function NearbyHospitalsMap({ lat, lng, locationLabel, priority, t }: Pro
   if (lat == null || lng == null) {
     const facility = facilityByLocation(locationLabel, priority);
     return (
-      <section className="glass-card border-l-4 border-l-accent-cyan p-6">
-        <h3 className="text-lg font-semibold text-white">{t.nearestHospitals}</h3>
-        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <p className="font-semibold text-white">{facility.name}</p>
-          <p className="mt-2 text-sm text-white/60">{facility.distance} · {facility.hours}</p>
+      <section className="result-card-premium !mx-0 border-l-4 border-l-accent-cyan">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t.nearestHospitals}</h3>
+        <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/[0.03]">
+          <p className="font-semibold text-gray-900 dark:text-white">{facility.name}</p>
+          <p className="mt-2 text-sm text-gray-600 dark:text-white/60">{facility.distance} · {facility.hours}</p>
           <a
             href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(facility.name)}`}
             target="_blank"
             rel="noreferrer"
-            className="btn-glow mt-4 inline-flex rounded-xl bg-gradient-to-r from-primary to-accent-cyan px-4 py-2 text-sm font-semibold text-white"
+            className="btn-touch mt-4 inline-flex rounded-xl bg-gradient-to-r from-primary to-accent-cyan px-4 py-2 text-sm font-semibold text-white"
           >
             {t.getDirections}
           </a>
@@ -81,14 +81,16 @@ export function NearbyHospitalsMap({ lat, lng, locationLabel, priority, t }: Pro
   }
 
   return (
-    <section className="glass-card border-l-4 border-l-accent-cyan p-6">
-      <h3 className="text-lg font-semibold text-white">{t.nearestHospitals}</h3>
+    <section className="result-card-premium !mx-0 border-l-4 border-l-accent-cyan">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t.nearestHospitals}</h3>
 
-      <div className="mt-4 h-[400px] overflow-hidden rounded-2xl border border-white/10">
+      <div className="mt-4 h-[400px] overflow-hidden rounded-2xl border border-gray-200 dark:border-white/10">
         <OsmMapInner patientLat={lat} patientLng={lng} hospitals={hospitals} />
       </div>
 
-      {loading && <p className="mt-3 text-sm text-white/50">Searching nearby facilities…</p>}
+      {loading && (
+        <p className="mt-3 text-sm text-gray-500 dark:text-white/50">Searching nearby facilities…</p>
+      )}
 
       {noResults && (
         <p className="mt-4 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
@@ -100,10 +102,10 @@ export function NearbyHospitalsMap({ lat, lng, locationLabel, priority, t }: Pro
         {hospitals.map((h, idx) => (
           <div
             key={h.id}
-            className={`rounded-2xl border bg-white/[0.03] p-4 ${
+            className={`rounded-2xl border bg-white p-4 dark:bg-white/[0.03] ${
               priority === "P1" && idx === 0
                 ? "animate-pulse border-danger/60 ring-2 ring-danger/30"
-                : "border-white/10"
+                : "border-gray-200 dark:border-white/10"
             }`}
           >
             {priority === "P1" && idx === 0 && (
@@ -111,15 +113,15 @@ export function NearbyHospitalsMap({ lat, lng, locationLabel, priority, t }: Pro
                 {t.nearestEmergencyBadge}
               </span>
             )}
-            <p className="font-semibold text-white">{h.name}</p>
-            <p className="mt-1 text-sm text-white/60">
+            <p className="font-semibold text-gray-900 dark:text-white">{h.name}</p>
+            <p className="mt-1 text-sm text-gray-600 dark:text-white/60">
               {formatDistance(h.distanceMeters)} · {h.type}
             </p>
             <a
               href={`https://www.openstreetmap.org/directions?from=${lat}%2C${lng}&to=${h.lat}%2C${h.lng}`}
               target="_blank"
               rel="noreferrer"
-              className="mt-3 inline-flex rounded-lg border border-white/10 px-3 py-1.5 text-sm text-white hover:border-primary"
+              className="mt-3 inline-flex rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:border-primary dark:border-white/10 dark:text-white"
             >
               {t.getDirections}
             </a>

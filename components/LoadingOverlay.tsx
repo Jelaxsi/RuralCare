@@ -31,8 +31,8 @@ export function LoadingOverlay({ messages, waitHint }: Props) {
             ⚕️
           </div>
         </div>
-        <p className="mt-6 text-base font-medium text-white/90">{messages[index]}</p>
-        {waitHint && <p className="mt-2 text-sm text-white/45">{waitHint}</p>}
+        <p className="mt-6 text-base font-medium text-gray-900 dark:text-white/90">{messages[index]}</p>
+        {waitHint && <p className="mt-2 text-sm text-gray-500 dark:text-white/45">{waitHint}</p>}
       </div>
     </div>
   );

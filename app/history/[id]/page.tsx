@@ -57,7 +57,7 @@ export default function PatientHistoryPage() {
   }, [cases, selected]);
 
   return (
-    <div className="min-h-screen bg-surface-light px-4 py-10 dark:bg-surface-dark md:px-8">
+    <div className="min-h-screen bg-gray-50 px-4 py-10 dark:bg-[#050A14] md:px-8">
       <div className="mx-auto max-w-5xl">
         <Link href="/dashboard" className="btn-secondary mb-6 inline-flex text-sm">
           ← Back to Dashboard

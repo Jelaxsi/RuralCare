@@ -1,4 +1,5 @@
 import { kv } from "@vercel/kv";
+import { existsSync } from "fs";
 import { promises as fs } from "fs";
 import path from "path";
 import type { CaseRecord } from "../types";
@@ -11,6 +12,9 @@ function hasKvConfigured(): boolean {
 }
 
 async function readFromFile(): Promise<CaseRecord[]> {
+  if (!existsSync(CASES_PATH)) {
+    return [];
+  }
   const raw = await fs.readFile(CASES_PATH, "utf8").catch(() => "[]");
   try {
     const parsed = JSON.parse(raw) as unknown;

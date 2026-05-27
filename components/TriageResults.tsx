@@ -35,15 +35,15 @@ type Props = {
 };
 
 const PRIORITY_BANNER: Record<Priority, string> = {
-  P1: "bg-gradient-to-br from-red-500/15 to-red-500/5 border-red-500/20",
-  P2: "bg-gradient-to-br from-amber-500/15 to-amber-500/5 border-amber-500/20",
-  P3: "bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border-emerald-500/20",
+  P1: "bg-red-50 border-red-200 dark:bg-red-500/10 dark:border-red-500/20",
+  P2: "bg-amber-50 border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/20",
+  P3: "bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20",
 };
 
 const PRIORITY_TEXT: Record<Priority, string> = {
-  P1: "text-red-400",
-  P2: "text-amber-400",
-  P3: "text-emerald-400",
+  P1: "text-red-700 dark:text-red-400",
+  P2: "text-amber-700 dark:text-amber-400",
+  P3: "text-emerald-700 dark:text-emerald-400",
 };
 
 function formatAssessedAt(iso: string): string {
@@ -196,7 +196,7 @@ export function TriageResults({
             {t.backToAssessment}
           </button>
           {result.priority === "P1" && (
-            <span className="text-xs font-bold uppercase tracking-wide text-red-400">
+            <span className="text-xs font-bold uppercase tracking-wide text-red-700 dark:text-red-400">
               {t.callEmergencyNow}
             </span>
           )}
@@ -217,7 +217,7 @@ export function TriageResults({
           } ${isStreaming ? "animate-pulse" : ""}`}
         >
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <p className="text-xs font-semibold uppercase tracking-widest text-theme-subtle">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-white/40">
               {t.assignedPriority}
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -225,8 +225,8 @@ export function TriageResults({
               <span
                 className={`rounded-full border px-3 py-0.5 text-xs font-medium ${
                   timePulsing
-                    ? "animate-pulse border-red-500/40 bg-red-500/10 text-red-300"
-                    : "border-white/10 bg-white/5 text-white/60"
+                    ? "animate-pulse border-red-300 bg-red-100 text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300"
+                    : "border-gray-200 bg-gray-100 text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-white/60"
                 }`}
               >
                 {t.estimatedTime}: {translatedTime}
@@ -235,7 +235,7 @@ export function TriageResults({
                 type="button"
                 onClick={toggleMute}
                 aria-label={muted ? t.unmuteAudio : t.muteAudio}
-                className="rounded-lg border border-white/10 p-1.5 text-white/50 hover:text-white"
+                className="rounded-lg border border-gray-200 p-1.5 text-gray-500 hover:text-gray-800 dark:border-white/10 dark:text-white/50 dark:hover:text-white"
               >
                 {muted ? "🔇" : "🔊"}
               </button>
@@ -245,10 +245,10 @@ export function TriageResults({
           <p className={`break-words text-[clamp(48px,14vw,72px)] font-black leading-none ${PRIORITY_TEXT[result.priority]}`}>
             {result.priority}
           </p>
-          <p className="mt-1 break-words text-xl text-theme-body">{result.likely_condition}</p>
-          <p className="mt-2 break-words text-sm italic text-theme-muted">{result.reason}</p>
-          <p className="mt-3 text-xs text-theme-subtle">{assessedLabel}</p>
-          <p className="mt-1 text-xs text-theme-subtle">
+          <p className="mt-1 break-words text-xl text-gray-800 dark:text-white/80">{result.likely_condition}</p>
+          <p className="mt-2 break-words text-sm italic text-gray-600 dark:text-white/50">{result.reason}</p>
+          <p className="mt-3 text-xs text-gray-400 dark:text-white/30">{assessedLabel}</p>
+          <p className="mt-1 text-xs text-gray-400 dark:text-white/30">
             {t.patientIdLabel}: {patientId}
           </p>
 
@@ -267,13 +267,13 @@ export function TriageResults({
                 {t.tapToHear}
               </button>
             )}
-            <button type="button" onClick={() => void speak()} className="text-xs text-white/50 hover:text-white">
+            <button type="button" onClick={() => void speak()} className="text-xs text-gray-500 hover:text-gray-800 dark:text-white/50 dark:hover:text-white">
               {t.listenAgain}
             </button>
-            <button type="button" onClick={printResults} className="text-xs text-white/50 hover:text-white">
+            <button type="button" onClick={printResults} className="text-xs text-gray-500 hover:text-gray-800 dark:text-white/50 dark:hover:text-white">
               {t.printResult}
             </button>
-            <button type="button" onClick={() => void shareResults()} className="text-xs text-white/50 hover:text-white">
+            <button type="button" onClick={() => void shareResults()} className="text-xs text-gray-500 hover:text-gray-800 dark:text-white/50 dark:hover:text-white">
               {copied ? t.copied : t.shareResult}
             </button>
           </div>
@@ -282,26 +282,26 @@ export function TriageResults({
 
       <StaggerCard index={cardIndex++}>
         <section className="result-card-premium">
-          <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-theme-muted">
+          <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-white/70">
             <MedicalCrossIcon className="h-4 w-4 text-violet-400" />
             {t.clinicalSummary}
           </h3>
-          <p className="mb-2 text-xs uppercase tracking-wider text-theme-subtle">{t.whatsHappening}</p>
-          <p className="break-words text-sm leading-relaxed text-theme-muted">
+          <p className="mb-2 text-xs uppercase tracking-wider text-gray-400 dark:text-white/40">{t.whatsHappening}</p>
+          <p className="break-words text-sm leading-relaxed text-gray-600 dark:text-white/60">
             {placeholder(result.what_is_happening) && isStreaming ? "…" : result.what_is_happening}
           </p>
           {result.specialist_needed && (
-            <p className="mt-3 break-words text-sm text-white/60">
-              <span className="text-white/40">{t.specialistNeeded}: </span>
+            <p className="mt-3 break-words text-sm text-gray-600 dark:text-white/60">
+              <span className="text-gray-400 dark:text-white/40">{t.specialistNeeded}: </span>
               {result.specialist_needed}
             </p>
           )}
-          <p className="mt-3 break-words text-sm text-white/60">
-            <span className="text-white/40">{t.followUp}: </span>
+          <p className="mt-3 break-words text-sm text-gray-600 dark:text-white/60">
+            <span className="text-gray-400 dark:text-white/40">{t.followUp}: </span>
             {result.follow_up}
           </p>
-          <p className="mt-3 break-words text-sm text-white/50">
-            <span className="text-white/40">{t.clinicalReasoning}: </span>
+          <p className="mt-3 break-words text-sm text-gray-500 dark:text-white/50">
+            <span className="text-gray-400 dark:text-white/40">{t.clinicalReasoning}: </span>
             {result.clinical_reasoning}
           </p>
         </section>
@@ -310,16 +310,16 @@ export function TriageResults({
       {!isStreaming && result.immediate_actions.length > 0 && (
       <StaggerCard index={cardIndex++}>
         <section id="triage-print-actions" className="result-card-premium">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-white/70">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-white/70">
             {t.immediateActions}
           </h3>
           <ol className="space-y-2">
             {result.immediate_actions.map((step, idx) => (
               <li key={step} className="flex items-start gap-2 py-1.5">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-xs font-bold text-violet-300">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-xs font-bold text-violet-600 dark:text-violet-300">
                   {idx + 1}
                 </span>
-                <label className="flex flex-1 items-start gap-2 break-words text-sm leading-relaxed text-white/60">
+                <label className="flex flex-1 items-start gap-2 break-words text-sm leading-relaxed text-gray-600 dark:text-white/60">
                   <input
                     type="checkbox"
                     checked={Boolean(checkedActions[idx])}
@@ -343,7 +343,7 @@ export function TriageResults({
           </h3>
           <ul className="space-y-1.5">
             {result.warning_signs.map((sign) => (
-              <li key={sign} className="flex items-start gap-2 break-words text-sm text-white/60">
+              <li key={sign} className="flex items-start gap-2 break-words text-sm text-gray-600 dark:text-white/60">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
                 {sign}
               </li>
@@ -361,7 +361,7 @@ export function TriageResults({
           </h3>
           <ul className="space-y-1.5">
             {result.do_not_do.map((item) => (
-              <li key={item} className="flex items-start gap-2 break-words text-sm text-white/60">
+              <li key={item} className="flex items-start gap-2 break-words text-sm text-gray-600 dark:text-white/60">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
                 {item}
               </li>
@@ -386,8 +386,7 @@ export function TriageResults({
           <button
             type="button"
             onClick={onNewAssessment}
-            className="btn-touch w-full rounded-xl border py-3 font-semibold text-theme-body transition"
-            style={{ borderColor: "var(--border-default)", background: "var(--surface-muted)" }}
+            className="btn-touch w-full rounded-xl border border-gray-200 bg-gray-100 py-3 font-semibold text-gray-800 transition hover:bg-gray-200 dark:border-white/20 dark:bg-white/10 dark:text-white/80 dark:hover:bg-white/15"
           >
             {t.backToAssessment}
           </button>
@@ -395,8 +394,7 @@ export function TriageResults({
         <button
           type="button"
           onClick={onNewAssessment}
-          className="btn-touch w-full rounded-xl border py-3 font-medium text-theme-muted transition hover:opacity-90"
-          style={{ borderColor: "var(--border-default)", background: "var(--card-bg)" }}
+          className="btn-touch w-full rounded-xl border border-gray-200 bg-white py-3 font-medium text-gray-600 transition hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10"
         >
           {t.startNewAssessment}
         </button>
