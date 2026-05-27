@@ -199,6 +199,16 @@ body {
   .page-fade-in {
     animation: pageFadeIn 0.35s ease-out;
   }
+
+  .landing-gradient-title {
+    @apply text-[clamp(2rem,8vw,3.25rem)] font-black leading-tight tracking-tight;
+    background: linear-gradient(135deg, #7c3aed 0%, #06b6d4 50%, #7c3aed 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: gradientShift 4s ease infinite;
+  }
 }
 
 @keyframes micPing {
@@ -219,6 +229,11 @@ body {
 @keyframes pageFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 100% center; }
 }
 
 @media print {

@@ -13,9 +13,24 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "RuralCare — Emergency Triage System",
-  description: "Production-grade emergency health triage for rural healthcare networks across South Asia.",
+  title: "RuralCare — Emergency Health Triage",
+  description:
+    "AI-powered emergency health triage for rural South Asia. Speak symptoms in Tamil, Sinhala, Hindi and 8 more languages. Instant P1/P2/P3 urgency scoring.",
+  keywords:
+    "emergency triage, rural healthcare, Tamil, Sinhala, AI medical, Sri Lanka, South Asia",
   manifest: "/manifest.json",
+  openGraph: {
+    title: "RuralCare — Emergency Health Triage",
+    description: "Speak your symptoms. AI assesses urgency in 11 languages.",
+    url: "https://rural-care-swart.vercel.app",
+    siteName: "RuralCare",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "RuralCare — Emergency Health Triage",
+    description: "AI triage in 11 South Asian languages",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -52,7 +67,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} font-sans text-base bg-deep`}>
         <ThemeProvider>
-          <OfflineBanner message="You are offline. Some features may not work." />
+          <OfflineBanner />
           <ServiceWorkerRegister />
           {children}
         </ThemeProvider>

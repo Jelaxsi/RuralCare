@@ -23,6 +23,7 @@ type Props = {
   patientId: string;
   patientName: string;
   age: string;
+  gender?: string;
   transcript: string;
   location: string;
   lat: number | null;
@@ -74,6 +75,7 @@ export function TriageResults({
   patientId,
   patientName,
   age,
+  gender = "",
   transcript,
   location,
   lat,
@@ -155,13 +157,69 @@ export function TriageResults({
   }
 
   function printResults() {
-    const html = printRef.current?.innerHTML;
-    if (!html) return;
+    const caseUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/history/${encodeURIComponent(patientId)}`
+        : "https://rural-care-swart.vercel.app";
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(caseUrl)}`;
+    const priorityColor =
+      result.priority === "P1" ? "#dc2626" : result.priority === "P2" ? "#d97706" : "#059669";
+    const actionsHtml = result.immediate_actions
+      .map((step, i) => `<li><strong>${i + 1}.</strong> ${step}</li>`)
+      .join("");
+    const emergencyHtml =
+      result.call_emergency && result.emergency_number
+        ? `<p class="emergency">🚨 Call ${result.emergency_number} immediately</p>`
+        : "";
+
     const win = window.open("", "_blank", "width=800,height=900");
     if (!win) return;
-    win.document.write(
-      `<!DOCTYPE html><html><head><title>RuralCare Triage</title><style>body{font-family:sans-serif;padding:24px;line-height:1.5}</style></head><body>${html}</body></html>`,
-    );
+    win.document.write(`<!DOCTYPE html><html><head><title>RuralCare Triage Card</title>
+<style>
+@page { size: A4; margin: 16mm; }
+body { font-family: Inter, Arial, sans-serif; color: #1e293b; line-height: 1.5; max-width: 180mm; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #7c3aed; padding-bottom: 12px; margin-bottom: 16px; }
+.logo { font-size: 24px; font-weight: 900; color: #7c3aed; }
+.meta { font-size: 12px; color: #64748b; text-align: right; }
+.patient { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; font-size: 14px; }
+.priority { text-align: center; padding: 20px; border-radius: 12px; border: 3px solid ${priorityColor}; margin-bottom: 16px; }
+.priority-badge { font-size: 64px; font-weight: 900; color: ${priorityColor}; }
+.condition { font-size: 20px; font-weight: 700; margin-top: 8px; }
+.actions ol { padding-left: 20px; }
+.actions li { margin-bottom: 8px; }
+.footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+.disclaimer { font-size: 11px; color: #64748b; max-width: 70%; }
+.emergency { color: #dc2626; font-weight: bold; font-size: 16px; margin: 12px 0; }
+.sign { margin-top: 32px; font-size: 13px; }
+</style></head><body>
+<div class="header">
+  <div class="logo">+ RuralCare</div>
+  <div class="meta">${formatAssessedAt(timestamp)}<br/>${t.patientIdLabel}: ${patientId}</div>
+</div>
+<div class="patient">
+  <div><strong>${t.patientNameLabel}:</strong> ${patientName || "—"}</div>
+  <div><strong>${t.ageLabel}:</strong> ${age || "—"}</div>
+  <div><strong>${t.genderLabel}:</strong> ${gender || "—"}</div>
+  <div><strong>${t.locationLabel}:</strong> ${location || "—"}</div>
+</div>
+<div class="priority">
+  <div class="priority-badge">${result.priority}</div>
+  <div class="condition">${result.likely_condition}</div>
+  <p style="margin-top:8px;font-style:italic">${result.reason}</p>
+</div>
+${emergencyHtml}
+<div class="actions">
+  <h3>${t.immediateActions}</h3>
+  <ol>${actionsHtml}</ol>
+</div>
+<div class="footer">
+  <div>
+    <p class="disclaimer">${t.printAiDisclaimer}</p>
+    <p class="sign">${t.printDoctorSign}</p>
+  </div>
+  <img src="${qrUrl}" alt="QR" width="100" height="100"/>
+</div>
+</body></html>`);
     win.document.close();
     win.print();
   }

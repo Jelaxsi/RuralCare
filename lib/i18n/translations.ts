@@ -1,4 +1,5 @@
 import type { TranslationLanguage } from "./languages";
+import { mergeMarketingTranslations } from "./marketing-keys";
 
 export type TranslationKeys = {
   title: string;
@@ -129,6 +130,100 @@ export type TranslationKeys = {
   sharePriorityLabel: string;
   shareAssessmentLabel: string;
   shareTimeLabel: string;
+  aboutTitle: string;
+  aboutSubtitle: string;
+  aboutHeroTitle: string;
+  aboutHeroSubtitle: string;
+  aboutMission: string;
+  aboutMissionText: string;
+  aboutHowTitle: string;
+  aboutStep1: string;
+  aboutStep2: string;
+  aboutStep3: string;
+  aboutStep4: string;
+  aboutTechTitle: string;
+  aboutTechValsea: string;
+  aboutTechGroq: string;
+  aboutTechNext: string;
+  aboutTechVercel: string;
+  aboutLanguagesTitle: string;
+  aboutDisclaimer: string;
+  aboutDisclaimerText: string;
+  aboutBuiltWith: string;
+  aboutVersion: string;
+  aboutContact: string;
+  aboutContactText: string;
+  aboutBackTriage: string;
+  aboutStatLanguages: string;
+  aboutStatTriage: string;
+  aboutStatInstall: string;
+  dashboardTitle: string;
+  dashboardHome: string;
+  dashboardTriageLink: string;
+  dashTotalToday: string;
+  dashP1: string;
+  dashP2: string;
+  dashP3: string;
+  dashAvgResponse: string;
+  dashShiftAll: string;
+  dashShiftMorning: string;
+  dashShiftEvening: string;
+  dashShiftNight: string;
+  dashSearchPlaceholder: string;
+  dashAllWards: string;
+  dashSortNewest: string;
+  dashSortOldest: string;
+  dashSortP1First: string;
+  dashSortP3First: string;
+  dashExportCsv: string;
+  dashMarkResolved: string;
+  dashPrintReport: string;
+  dashFilterAll: string;
+  dashFilterToday: string;
+  dashFilterWeek: string;
+  dashLoading: string;
+  dashNoCases: string;
+  dashNoMatch: string;
+  dashAutoRefresh: string;
+  dashColPatient: string;
+  dashColLocation: string;
+  dashColWard: string;
+  dashColPriority: string;
+  dashColCondition: string;
+  dashColTime: string;
+  dashColActions: string;
+  landingStartTriage: string;
+  landingStatLanguages: string;
+  landingStatTriage: string;
+  landingStatInstall: string;
+  landingFeatureVoice: string;
+  landingFeatureAi: string;
+  landingFeatureHospitals: string;
+  qrTitle: string;
+  qrSubtitle: string;
+  qrScanLabel: string;
+  qrDownload: string;
+  qrBack: string;
+  feedbackQuestion: string;
+  feedbackYes: string;
+  feedbackNo: string;
+  feedbackComment: string;
+  feedbackThanks: string;
+  keyboardHints: string;
+  statsTitle: string;
+  statsTotalCases: string;
+  statsByMonth: string;
+  statsByPriority: string;
+  statsTopConditions: string;
+  statsAvgPerDay: string;
+  statsByLanguage: string;
+  notFoundTitle: string;
+  notFoundText: string;
+  notFoundHome: string;
+  printAiDisclaimer: string;
+  printDoctorSign: string;
+  slowAnalysisHint: string;
+  offlineMessage: string;
 };
 
 const en: TranslationKeys = {
@@ -263,6 +358,102 @@ const en: TranslationKeys = {
   sharePriorityLabel: "Priority",
   shareAssessmentLabel: "Assessment",
   shareTimeLabel: "Time",
+  aboutTitle: "About RuralCare",
+  aboutSubtitle: "AI-powered emergency triage for rural South Asia",
+  aboutHeroTitle: "Saving Lives in Rural South Asia",
+  aboutHeroSubtitle: "Voice-first emergency triage in 11 languages — no app install required.",
+  aboutMission: "Our Mission",
+  aboutMissionText:
+    "RuralCare bridges the gap between rural patients and emergency medical care using AI and voice technology.",
+  aboutHowTitle: "How It Works",
+  aboutStep1: "Speak your symptoms in your language",
+  aboutStep2: "AI analyzes and scores urgency",
+  aboutStep3: "Get instant first aid guidance",
+  aboutStep4: "Find the nearest hospital",
+  aboutTechTitle: "Technology",
+  aboutTechValsea: "Real-time speech recognition in 11 South Asian languages",
+  aboutTechGroq: "Fast AI triage with P1/P2/P3 urgency scoring",
+  aboutTechNext: "Modern web platform that works on any phone",
+  aboutTechVercel: "Reliable cloud hosting for rural connectivity",
+  aboutLanguagesTitle: "Languages Supported",
+  aboutDisclaimer: "Medical Disclaimer",
+  aboutDisclaimerText:
+    "RuralCare is an AI-assisted triage tool only. It does not replace professional medical advice. Always consult a qualified healthcare provider for diagnosis and treatment.",
+  aboutBuiltWith: "Built with",
+  aboutVersion: "Version",
+  aboutContact: "Contact & Feedback",
+  aboutContactText: "Questions or feedback? Reach us on GitHub.",
+  aboutBackTriage: "← Back to Triage",
+  aboutStatLanguages: "11 Languages",
+  aboutStatTriage: "P1/P2/P3 Triage",
+  aboutStatInstall: "Zero App Install",
+  dashboardTitle: "Live Triage Dashboard",
+  dashboardHome: "← Home · Command Center",
+  dashboardTriageLink: "Triage",
+  dashTotalToday: "Total today",
+  dashP1: "P1 Critical",
+  dashP2: "P2 Urgent",
+  dashP3: "P3 Non-urgent",
+  dashAvgResponse: "Avg response",
+  dashShiftAll: "All",
+  dashShiftMorning: "Morning",
+  dashShiftEvening: "Evening",
+  dashShiftNight: "Night",
+  dashSearchPlaceholder: "Search name, location, patient ID…",
+  dashAllWards: "All wards",
+  dashSortNewest: "Newest first",
+  dashSortOldest: "Oldest first",
+  dashSortP1First: "P1 first",
+  dashSortP3First: "P3 first",
+  dashExportCsv: "Export CSV",
+  dashMarkResolved: "Mark resolved",
+  dashPrintReport: "Print shift report",
+  dashFilterAll: "All",
+  dashFilterToday: "Today",
+  dashFilterWeek: "This week",
+  dashLoading: "Loading cases…",
+  dashNoCases: "No cases recorded yet.",
+  dashNoMatch: "No cases match filters.",
+  dashAutoRefresh: "Auto-refresh every 30 seconds",
+  dashColPatient: "Patient",
+  dashColLocation: "Location",
+  dashColWard: "Ward",
+  dashColPriority: "Priority",
+  dashColCondition: "Condition",
+  dashColTime: "Time",
+  dashColActions: "Actions",
+  landingStartTriage: "Start Triage",
+  landingStatLanguages: "11 Languages",
+  landingStatTriage: "P1/P2/P3 Triage",
+  landingStatInstall: "Zero App Install",
+  landingFeatureVoice: "🎙 Voice in your language",
+  landingFeatureAi: "⚡ Instant AI triage",
+  landingFeatureHospitals: "🏥 Find nearby hospitals",
+  qrTitle: "QR Access",
+  qrSubtitle: "Scan to access RuralCare Emergency Triage. Print and post at clinics.",
+  qrScanLabel: "Scan to access RuralCare",
+  qrDownload: "Download QR Code",
+  qrBack: "← Back to Triage",
+  feedbackQuestion: "Was this assessment helpful?",
+  feedbackYes: "👍 Yes, helpful",
+  feedbackNo: "👎 Not helpful",
+  feedbackComment: "What could be better? (optional)",
+  feedbackThanks: "Thank you for your feedback!",
+  keyboardHints: "Space to record · Enter to analyze · Esc to reset",
+  statsTitle: "Case Statistics",
+  statsTotalCases: "Total cases",
+  statsByMonth: "Cases by month",
+  statsByPriority: "Priority distribution",
+  statsTopConditions: "Most common conditions",
+  statsAvgPerDay: "Average cases per day",
+  statsByLanguage: "Language distribution",
+  notFoundTitle: "Page not found",
+  notFoundText: "The page you are looking for does not exist.",
+  notFoundHome: "Back to Triage",
+  printAiDisclaimer: "This is an AI-generated assessment — not a medical diagnosis.",
+  printDoctorSign: "Doctor signature: _______________________",
+  slowAnalysisHint: "Analysis taking longer than usual — please wait or type symptoms manually",
+  offlineMessage: "You are offline — voice analysis requires internet connection",
 };
 
 export const translations: Record<TranslationLanguage, TranslationKeys> = {
@@ -925,5 +1116,6 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
 };
 
 export function getTranslations(lang: TranslationLanguage): TranslationKeys {
-  return { ...translations.english, ...(translations[lang] ?? {}) };
+  const base = { ...translations.english, ...(translations[lang] ?? {}) };
+  return mergeMarketingTranslations(lang, base);
 }

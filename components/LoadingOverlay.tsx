@@ -5,10 +5,12 @@ import { useEffect, useState } from "react";
 type Props = {
   messages: string[];
   waitHint?: string;
+  slowHint?: string;
 };
 
-export function LoadingOverlay({ messages, waitHint }: Props) {
+export function LoadingOverlay({ messages, waitHint, slowHint }: Props) {
   const [index, setIndex] = useState(0);
+  const [showSlow, setShowSlow] = useState(false);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -16,6 +18,12 @@ export function LoadingOverlay({ messages, waitHint }: Props) {
     }, 2200);
     return () => window.clearInterval(id);
   }, [messages.length]);
+
+  useEffect(() => {
+    if (!slowHint) return;
+    const id = window.setTimeout(() => setShowSlow(true), 8000);
+    return () => window.clearTimeout(id);
+  }, [slowHint]);
 
   return (
     <div
@@ -33,6 +41,9 @@ export function LoadingOverlay({ messages, waitHint }: Props) {
         </div>
         <p className="mt-6 text-base font-medium text-gray-900 dark:text-white/90">{messages[index]}</p>
         {waitHint && <p className="mt-2 text-sm text-gray-500 dark:text-white/45">{waitHint}</p>}
+        {showSlow && slowHint && (
+          <p className="mt-4 max-w-sm text-sm font-medium text-amber-600 dark:text-amber-300">{slowHint}</p>
+        )}
       </div>
     </div>
   );

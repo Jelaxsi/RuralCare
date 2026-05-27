@@ -272,12 +272,24 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const body = (await req.json()) as { ids?: string[]; resolved?: boolean };
+    const body = (await req.json()) as {
+      ids?: string[];
+      resolved?: boolean;
+      feedbackHelpful?: boolean;
+      feedbackComment?: string;
+    };
     const ids = Array.isArray(body.ids) ? body.ids.filter(Boolean) : [];
     if (!ids.length) {
       return NextResponse.json({ error: "ids array required" }, { status: 400 });
     }
-    const updated = await updateCases(ids, { resolved: body.resolved ?? true });
+    const patch: Partial<Pick<CaseRecord, "resolved" | "feedbackHelpful" | "feedbackComment">> = {};
+    if (typeof body.resolved === "boolean") patch.resolved = body.resolved;
+    if (typeof body.feedbackHelpful === "boolean") patch.feedbackHelpful = body.feedbackHelpful;
+    if (typeof body.feedbackComment === "string") patch.feedbackComment = body.feedbackComment;
+    if (!Object.keys(patch).length) {
+      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    }
+    const updated = await updateCases(ids, patch);
     return NextResponse.json({ ok: true, updated });
   } catch {
     return NextResponse.json({ error: "Update failed" }, { status: 500 });

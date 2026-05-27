@@ -40,6 +40,8 @@ export type CaseRecord = TriageResult & {
   timestamp: string;
   resolved?: boolean;
   responseTimeMs?: number;
+  feedbackHelpful?: boolean | null;
+  feedbackComment?: string;
 };
 
 export type Shift = "morning" | "evening" | "night";

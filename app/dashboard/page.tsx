@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { ThemeToggle } from "@/components/SystemStatus";
 import { WARD_OPTIONS, hospitalConfig } from "@/lib/hospital/config";
+import { useSavedLanguage } from "@/lib/i18n/useSavedLanguage";
 import type { CaseRecord, Priority, Shift } from "@/lib/types";
 
 type SortMode = "NEWEST" | "OLDEST" | "P1_FIRST" | "P3_FIRST";
@@ -39,11 +41,12 @@ function getShift(date: Date): Shift {
   return "night";
 }
 
-function shiftLabel(s: Shift) {
-  return s === "morning" ? "Morning" : s === "evening" ? "Evening" : "Night";
+function shiftLabel(s: Shift, t: ReturnType<typeof useSavedLanguage>["t"]) {
+  return s === "morning" ? t.dashShiftMorning : s === "evening" ? t.dashShiftEvening : t.dashShiftNight;
 }
 
 export default function DashboardPage() {
+  const { t, langOption } = useSavedLanguage();
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [filter, setFilter] = useState<FilterMode>("ALL");
   const [wardFilter, setWardFilter] = useState("");
@@ -184,9 +187,9 @@ export default function DashboardPage() {
       table{width:100%;border-collapse:collapse;margin-top:16px}td,th{border:1px solid #e2e8f0;padding:8px;text-align:left}
       .p1{background:#fef2f2}.p2{background:#fffbeb}.p3{background:#ecfdf5}</style></head><body>
       <h1>${hospitalConfig.name} — Shift Report</h1>
-      <p>Shift: ${shift === "ALL" ? "All shifts" : shiftLabel(shift)} · ${new Date().toLocaleString()}</p>
-      <p>Total today: ${stats.totalToday} | P1: ${stats.p1} | P2: ${stats.p2} | P3: ${stats.p3} | Avg response: ${stats.avgResponse}</p>
-      <table><thead><tr><th>Patient</th><th>Priority</th><th>Condition</th><th>Ward</th><th>Time</th></tr></thead><tbody>
+      <p>Shift: ${shift === "ALL" ? t.dashShiftAll : shiftLabel(shift, t)} · ${new Date().toLocaleString()}</p>
+      <p>${t.dashTotalToday}: ${stats.totalToday} | P1: ${stats.p1} | P2: ${stats.p2} | P3: ${stats.p3} | ${t.dashAvgResponse}: ${stats.avgResponse}</p>
+      <table><thead><tr><th>${t.dashColPatient}</th><th>${t.dashColPriority}</th><th>${t.dashColCondition}</th><th>${t.dashColWard}</th><th>${t.dashColTime}</th></tr></thead><tbody>
       ${filtered
         .map(
           (c) =>
@@ -214,13 +217,13 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="font-bold text-text-primary">RuralCare</p>
-              <p className="text-sm text-text-muted">← Home · Command Center</p>
+              <p className="text-sm text-text-muted">{t.dashboardHome}</p>
             </div>
           </Link>
           <div className="flex items-center gap-2">
-            <ThemeToggle translationLang="english" />
+            <ThemeToggle translationLang={langOption.translationKey} />
             <Link href="/" className="btn-secondary py-2 text-sm">
-              Triage
+              {t.dashboardTriageLink}
             </Link>
           </div>
         </div>
@@ -228,7 +231,7 @@ export default function DashboardPage() {
 
       <main className="mx-auto max-w-7xl px-4 py-8 md:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-text-primary md:text-3xl">Live Triage Dashboard</h1>
+          <h1 className="text-2xl font-bold text-text-primary md:text-3xl">{t.dashboardTitle}</h1>
           <div className="flex gap-2 rounded-lg border border-border bg-surface-card p-1">
             <button
               type="button"
@@ -237,7 +240,7 @@ export default function DashboardPage() {
                 shift === "ALL" ? "dash-filter-active" : "dash-filter-inactive"
               }`}
             >
-              All
+              {t.dashShiftAll}
             </button>
             {(["morning", "evening", "night"] as Shift[]).map((s) => (
               <button
@@ -248,18 +251,18 @@ export default function DashboardPage() {
                   shift === s ? "dash-filter-active" : "dash-filter-inactive"
                 }`}
               >
-                {shiftLabel(s)}
+                {shiftLabel(s, t)}
               </button>
             ))}
           </div>
         </div>
 
         <section className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-5">
-          <KpiCard title="Total today" value={stats.totalToday} />
-          <KpiCard title="P1 Critical" value={stats.p1} accent="text-p1-rose" />
-          <KpiCard title="P2 Urgent" value={stats.p2} accent="text-p2-amber" />
-          <KpiCard title="P3 Non-urgent" value={stats.p3} accent="text-p3-emerald" />
-          <KpiCard title="Avg response" value={stats.avgResponse} isText />
+          <KpiCard title={t.dashTotalToday} value={stats.totalToday} />
+          <KpiCard title={t.dashP1} value={stats.p1} accent="text-p1-rose" />
+          <KpiCard title={t.dashP2} value={stats.p2} accent="text-p2-amber" />
+          <KpiCard title={t.dashP3} value={stats.p3} accent="text-p3-emerald" />
+          <KpiCard title={t.dashAvgResponse} value={stats.avgResponse} isText />
         </section>
 
         <section className="clinical-card">
@@ -268,7 +271,7 @@ export default function DashboardPage() {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name, location, patient ID…"
+              placeholder={t.dashSearchPlaceholder}
               aria-label="Search cases"
               className="input-field lg:max-w-md"
             />
@@ -279,7 +282,7 @@ export default function DashboardPage() {
                 aria-label="Filter by ward"
                 className="input-field w-auto"
               >
-                <option value="">All wards</option>
+                <option value="">{t.dashAllWards}</option>
                 {WARD_OPTIONS.map((w) => (
                   <option key={w} value={w}>
                     {w}
@@ -292,13 +295,13 @@ export default function DashboardPage() {
                 aria-label="Sort cases"
                 className="input-field w-auto"
               >
-                <option value="NEWEST">Newest first</option>
-                <option value="OLDEST">Oldest first</option>
-                <option value="P1_FIRST">P1 first</option>
-                <option value="P3_FIRST">P3 first</option>
+                <option value="NEWEST">{t.dashSortNewest}</option>
+                <option value="OLDEST">{t.dashSortOldest}</option>
+                <option value="P1_FIRST">{t.dashSortP1First}</option>
+                <option value="P3_FIRST">{t.dashSortP3First}</option>
               </select>
               <button type="button" onClick={exportCsv} className="btn-secondary py-2 text-sm">
-                Export CSV
+                {t.dashExportCsv}
               </button>
               <button
                 type="button"
@@ -306,10 +309,10 @@ export default function DashboardPage() {
                 disabled={!selectedIds.size}
                 className="btn-secondary py-2 text-sm disabled:opacity-50"
               >
-                Mark resolved ({selectedIds.size})
+                {t.dashMarkResolved} ({selectedIds.size})
               </button>
               <button type="button" onClick={printShiftReport} className="btn-primary py-2 text-sm">
-                Print shift report
+                {t.dashPrintReport}
               </button>
             </div>
           </div>
@@ -324,31 +327,37 @@ export default function DashboardPage() {
                   filter === f ? "dash-filter-active" : "dash-filter-inactive"
                 }`}
               >
-                {f === "ALL" ? "All" : f === "TODAY" ? "Today" : f === "WEEK" ? "This week" : f}
+                {f === "ALL"
+                  ? t.dashFilterAll
+                  : f === "TODAY"
+                    ? t.dashFilterToday
+                    : f === "WEEK"
+                      ? t.dashFilterWeek
+                      : f}
               </button>
             ))}
           </div>
 
           <div className="mt-6 overflow-x-auto rounded-xl border border-border">
             {loading ? (
-              <div className="p-12 text-center text-text-muted">Loading cases…</div>
+              <DashboardSkeleton />
             ) : error ? (
               <div className="p-12 text-center text-p1-rose">{error}</div>
             ) : filtered.length === 0 ? (
               <div className="p-12 text-center text-text-muted">
-                {cases.length === 0 ? "No cases recorded yet." : "No cases match filters."}
+                {cases.length === 0 ? t.dashNoCases : t.dashNoMatch}
               </div>
             ) : (
               <table className="min-w-[900px] w-full text-left text-base">
                 <thead className="border-b border-border bg-surface-muted text-sm uppercase tracking-wider text-text-muted">
                   <tr>
                     <th className="px-4 py-3"><span className="sr-only">Select</span></th>
-                    <SortableTh label="Patient" col="name" sortCol={sortCol} sortDir={sortDir} onSort={(c, d) => { setSortCol(c); setSortDir(d); }} />
-                    <th className="px-4 py-3">Location</th>
-                    <th className="px-4 py-3">Ward</th>
-                    <th className="px-4 py-3">Priority</th>
-                    <th className="px-4 py-3">Condition</th>
-                    <th className="px-4 py-3">Time</th>
+                    <SortableTh label={t.dashColPatient} col="name" sortCol={sortCol} sortDir={sortDir} onSort={(c, d) => { setSortCol(c); setSortDir(d); }} />
+                    <th className="px-4 py-3">{t.dashColLocation}</th>
+                    <th className="px-4 py-3">{t.dashColWard}</th>
+                    <th className="px-4 py-3">{t.dashColPriority}</th>
+                    <th className="px-4 py-3">{t.dashColCondition}</th>
+                    <th className="px-4 py-3">{t.dashColTime}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -382,7 +391,7 @@ export default function DashboardPage() {
                       <td className="px-4 py-3 text-text-secondary">{row.location}</td>
                       <td className="px-4 py-3 text-text-secondary">{row.ward ?? "—"}</td>
                       <td className="px-4 py-3">
-                        <PriorityBadge priority={row.priority} t={{ priorityCritical: "Critical", priorityUrgent: "Urgent", priorityNonUrgent: "Non-urgent", assignedPriority: "" }} size="sm" />
+                        <PriorityBadge priority={row.priority} t={t} size="sm" />
                       </td>
                       <td className="max-w-[200px] truncate px-4 py-3 text-text-secondary">{row.likely_condition}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-text-muted">{formatTime(row.timestamp)}</td>
@@ -392,7 +401,7 @@ export default function DashboardPage() {
               </table>
             )}
           </div>
-          <p className="mt-3 text-sm text-text-muted">Auto-refresh every 30 seconds</p>
+          <p className="mt-3 text-sm text-text-muted">{t.dashAutoRefresh}</p>
         </section>
       </main>
 
@@ -416,10 +425,7 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <PriorityBadge
-                priority={selectedCase.priority}
-                t={{ priorityCritical: "Critical", priorityUrgent: "Urgent", priorityNonUrgent: "Non-urgent", assignedPriority: "Priority" }}
-              />
+              <PriorityBadge priority={selectedCase.priority} t={t} />
               <Detail label="Patient ID" value={selectedCase.patientId} />
               <Detail label="Condition" value={selectedCase.likely_condition} />
               <Detail label="ICD-10" value={selectedCase.icd_code ?? "—"} />

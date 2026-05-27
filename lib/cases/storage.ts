@@ -68,7 +68,7 @@ export async function deleteCase(id: string): Promise<boolean> {
 
 export async function updateCases(
   ids: string[],
-  patch: Partial<Pick<CaseRecord, "resolved">>,
+  patch: Partial<Pick<CaseRecord, "resolved" | "feedbackHelpful" | "feedbackComment">>,
 ): Promise<number> {
   const cases = await readCases();
   const idSet = new Set(ids);

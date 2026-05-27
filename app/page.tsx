@@ -6,6 +6,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { PatientFeedback } from "@/components/PatientFeedback";
+import { TriageErrorBoundary } from "@/components/TriageErrorBoundary";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { MicSoundWave } from "@/components/SoundWaveVisualizer";
 import { SystemStatus, ThemeToggle } from "@/components/SystemStatus";
@@ -19,6 +21,7 @@ import {
   getSpeechCode,
 } from "@/lib/i18n/speech-lang";
 import { getTranslations } from "@/lib/i18n/translations";
+import { LANGUAGE_STORAGE_KEY, resolveStoredLanguageCode } from "@/lib/i18n/useSavedLanguage";
 import { emptyStreamingResult } from "@/lib/triage/stream-parse";
 import { streamTriageAnalysis } from "@/lib/triage/stream-client";
 import { playSpokenSummary, speechRateForPriority, buildSpokenSummary } from "@/lib/tts/speech";
@@ -98,7 +101,10 @@ export default function TriagePage() {
   const [result, setResult] = useState<TriageResult | null>(null);
   const [resultTimestamp, setResultTimestamp] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [savedCaseId, setSavedCaseId] = useState<string | null>(null);
   const [retryAnalyze, setRetryAnalyze] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const formRef = useRef<HTMLElement>(null);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -136,7 +142,13 @@ export default function TriagePage() {
 
   useEffect(() => {
     setPatientId(createClientPatientId());
+    setLanguage(resolveStoredLanguageCode());
+    setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches || "ontouchstart" in window);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  }, [language]);
 
   const transcriptFull = useMemo(() => {
     const spoken = `${finalTranscript} ${interimTranscript}`.trim();
@@ -736,6 +748,8 @@ export default function TriagePage() {
         setSaveState("idle");
         return;
       }
+      const data = (await res.json()) as { id?: string };
+      if (data.id) setSavedCaseId(data.id);
       setSaveState("saved");
     } catch {
       setLastError("Network error while saving");
@@ -752,11 +766,13 @@ export default function TriagePage() {
     setGender("");
     setPatientLocation("");
     setChiefComplaint("");
-    setLanguage("english");
+    setLanguage(resolveStoredLanguageCode());
     setCoords(null);
     setMicError(null);
     setHighlightManualInput(false);
     setLastError(null);
+    setSavedCaseId(null);
+    setSaveState("idle");
     setPatientId(createClientPatientId());
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [resetSession, stopRecognition]);
@@ -776,6 +792,45 @@ export default function TriagePage() {
   const hasSpeech = Boolean(finalTranscript || interimTranscript);
   const displayResult = result ?? streamPreview;
   const showResults = Boolean(displayResult);
+
+  useEffect(() => {
+    if (showResults || isTouchDevice) return;
+
+    function onKeyDown(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (recording) stopRecognition();
+        else void startRecording();
+      } else if (e.code === "Enter" && transcriptFull.trim()) {
+        e.preventDefault();
+        void stopAndAnalyze();
+      } else if (e.code === "Escape") {
+        e.preventDefault();
+        if (showResults) newTriage();
+        else {
+          stopRecognition();
+          resetSession();
+          setManualSymptoms("");
+        }
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    isTouchDevice,
+    recording,
+    showResults,
+    startRecording,
+    stopAndAnalyze,
+    stopRecognition,
+    resetSession,
+    newTriage,
+    transcriptFull,
+  ]);
 
   return (
     <div className="min-h-screen bg-deep page-fade-in">
@@ -797,21 +852,50 @@ export default function TriagePage() {
         <LoadingOverlay
           messages={[t.loadingAnalyzing, t.loadingPriority, t.loadingResults]}
           waitHint={t.loadingWaitTime}
+          slowHint={t.slowAnalysisHint}
         />
       )}
 
       <main className="mx-auto max-w-3xl pb-10">
         {!showResults && (
           <>
-            <section className="hero-section">
-              <h1 className="hero-title">{t.title}</h1>
-              <p className="mx-auto max-w-md text-base text-gray-500 dark:text-white/50">{t.subtitle}</p>
+            <section className="hero-section px-4 pb-4 pt-[calc(64px+24px)] text-center">
+              <h1 className="landing-gradient-title mb-4">{t.title}</h1>
+              <p className="mx-auto max-w-lg text-base text-text-muted">{t.subtitle}</p>
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
+                {[t.landingStatLanguages, t.landingStatTriage, t.landingStatInstall].map((badge) => (
+                  <span
+                    key={badge}
+                    className="rounded-full border border-violet-500/25 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-600 dark:text-violet-300"
+                  >
+                    {badge}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
+                {[t.landingFeatureVoice, t.landingFeatureAi, t.landingFeatureHospitals].map((pill) => (
+                  <span
+                    key={pill}
+                    className="rounded-full border border-border bg-surface-card px-4 py-2 text-sm text-text-secondary"
+                  >
+                    {pill}
+                  </span>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth" })}
+                className="btn-touch mt-8 rounded-xl bg-violet-600 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-violet-500/25 hover:bg-violet-500"
+              >
+                {t.landingStartTriage}
+              </button>
             </section>
 
             <div className="mx-4 mb-6">
               <DisclaimerBanner text={t.disclaimerLanding} />
             </div>
-            <section className="form-card mb-6" aria-labelledby="intake-heading">
+            <TriageErrorBoundary resetLabel={t.tryAgain}>
+            <section ref={formRef} className="form-card mb-6 scroll-mt-24" aria-labelledby="intake-heading">
               <p id="intake-heading" className="mb-4 text-xs font-semibold uppercase tracking-widest text-violet-400/80">
                 {t.patientDetails}
               </p>
@@ -899,6 +983,9 @@ export default function TriagePage() {
                     <MicIcon size={32} />
                   </button>
                   <p className="mt-2 text-sm text-gray-400 dark:text-white/40">{t.startBtn}</p>
+                  {!isTouchDevice && (
+                    <p className="mt-2 text-xs text-gray-400 dark:text-white/30">{t.keyboardHints}</p>
+                  )}
                 </div>
               )}
 
@@ -993,6 +1080,7 @@ export default function TriagePage() {
                 }`}
               />
             </section>
+            </TriageErrorBoundary>
           </>
         )}
 
@@ -1005,6 +1093,7 @@ export default function TriagePage() {
                 patientId={patientId || "--------"}
                 patientName={patientName}
                 age={age}
+                gender={gender}
                 transcript={transcriptFull}
                 location={patientLocation}
                 lat={coords?.lat ?? null}
@@ -1017,6 +1106,7 @@ export default function TriagePage() {
               />
             </div>
             {result && !streaming && (
+            <>
             <div className="no-print mx-4 mt-4 flex flex-col gap-3 pb-4 sm:flex-row">
               <button
                 type="button"
@@ -1027,6 +1117,10 @@ export default function TriagePage() {
                 {saveState === "saved" ? t.caseSaved : saveState === "saving" ? t.saving : t.saveCase}
               </button>
             </div>
+            {saveState === "saved" && savedCaseId && (
+              <PatientFeedback caseId={savedCaseId} t={t} />
+            )}
+            </>
             )}
           </>
         )}

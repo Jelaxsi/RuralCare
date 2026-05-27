@@ -1,15 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getLanguageOption } from "@/lib/i18n/languages";
+import { getTranslations } from "@/lib/i18n/translations";
+import { LANGUAGE_STORAGE_KEY, resolveStoredLanguageCode } from "@/lib/i18n/useSavedLanguage";
 
-type Props = {
-  message: string;
-};
-
-export function OfflineBanner({ message }: Props) {
+export function OfflineBanner() {
   const [offline, setOffline] = useState(false);
+  const [message, setMessage] = useState(
+    "You are offline — voice analysis requires internet connection",
+  );
 
   useEffect(() => {
+    const code = resolveStoredLanguageCode();
+    const langOption = getLanguageOption(code);
+    setMessage(getTranslations(langOption.translationKey).offlineMessage);
+
     const update = () => setOffline(!navigator.onLine);
     update();
     window.addEventListener("online", update);
