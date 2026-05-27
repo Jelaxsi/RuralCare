@@ -1,5 +1,6 @@
-const CACHE = "ruralcare-v1";
-const SHELL = ["/", "/manifest.json", "/icon.svg"];
+const CACHE = "ruralcare-v3";
+// Do not cache "/" or /_next/* — HTML and JS hashes change every deploy.
+const SHELL = ["/manifest.json", "/icon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -9,9 +10,10 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
-    ).then(() => self.clients.claim()),
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
   );
 });
 
@@ -19,6 +21,8 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.startsWith("/_next/")) return;
+  if (!SHELL.includes(url.pathname)) return;
 
   event.respondWith(
     caches.match(event.request).then((cached) => {

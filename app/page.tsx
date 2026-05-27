@@ -596,24 +596,59 @@ export default function TriagePage() {
 
     const effectiveLanguage = resolveEffectiveGroqLanguage(language, transcriptBody);
     const speechCode = getSpeechCode(language);
+    let ttsStarted = false;
+
+    const triagePayload = {
+      name: patientName,
+      age,
+      gender,
+      location: patientLocation,
+      chiefComplaint,
+      patientId: patientId || undefined,
+      language: effectiveLanguage,
+      transcript: transcriptBody,
+    };
+
+    const finishWithResult = (finalResult: TriageResult) => {
+      setResult(finalResult);
+      setStreamPreview(null);
+      setStreaming(false);
+    };
+
+    const fallbackTriage = async (): Promise<boolean> => {
+      try {
+        const res = await fetch("/api/triage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+          body: JSON.stringify({ ...triagePayload, persist: false }),
+        });
+        const data = (await res.json()) as TriageResult & { error?: string };
+        if (!res.ok) return false;
+        finishWithResult(data);
+        if (!ttsStarted) {
+          ttsStarted = true;
+          setEarlyTtsPlayed(true);
+          void playSpokenSummary({
+            text: data.reason.trim().substring(0, 100) || "Assessment complete",
+            speechCode,
+            speed: speechRateForPriority(data.priority),
+          });
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    };
 
     await streamTriageAnalysis(
-      {
-        name: patientName,
-        age,
-        gender,
-        location: patientLocation,
-        chiefComplaint,
-        patientId: patientId || undefined,
-        language: effectiveLanguage,
-        transcript: transcriptBody,
-      },
+      triagePayload,
       {
         onDelta: (_buffer, partial) => {
           streamPriorityRef.current = partial.priority;
           setStreamPreview(partial);
         },
         onFirstSentence: (sentence) => {
+          ttsStarted = true;
           setEarlyTtsPlayed(true);
           void playSpokenSummary({
             text: sentence.trim().substring(0, 100) || "Assessment complete",
@@ -622,14 +657,16 @@ export default function TriagePage() {
           });
         },
         onDone: (finalResult) => {
-          setResult(finalResult);
-          setStreamPreview(null);
-          setStreaming(false);
+          finishWithResult(finalResult);
         },
         onError: () => {
-          setLastError(t.errorGeneric);
-          setStreamPreview(null);
-          setStreaming(false);
+          void fallbackTriage().then((ok) => {
+            if (!ok) {
+              setLastError(t.errorGeneric);
+              setStreamPreview(null);
+              setStreaming(false);
+            }
+          });
         },
       },
     );
