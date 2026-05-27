@@ -9,6 +9,7 @@ import type { CaseRecord, Priority, Shift } from "@/lib/types";
 
 type SortMode = "NEWEST" | "OLDEST" | "P1_FIRST" | "P3_FIRST";
 type FilterMode = "ALL" | "P1" | "P2" | "P3" | "TODAY" | "WEEK";
+type ShiftFilter = Shift | "ALL";
 
 function priorityWeight(p: Priority): number {
   return p === "P1" ? 1 : p === "P2" ? 2 : 3;
@@ -46,7 +47,7 @@ export default function DashboardPage() {
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [filter, setFilter] = useState<FilterMode>("ALL");
   const [wardFilter, setWardFilter] = useState("");
-  const [shift, setShift] = useState<Shift>("morning");
+  const [shift, setShift] = useState<ShiftFilter>("ALL");
   const [query, setQuery] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("NEWEST");
   const [sortCol, setSortCol] = useState<string>("timestamp");
@@ -90,7 +91,7 @@ export default function DashboardPage() {
       if (filter === "TODAY" && !isSameDay(created, now)) return false;
       if (filter === "WEEK" && created < weekAgo) return false;
       if (wardFilter && (c.ward ?? "") !== wardFilter) return false;
-      if (getShift(created) !== shift) return false;
+      if (shift !== "ALL" && getShift(created) !== shift) return false;
       if (!q) return true;
       return `${c.name} ${c.location} ${c.patientId}`.toLowerCase().includes(q);
     });
@@ -182,7 +183,7 @@ export default function DashboardPage() {
       table{width:100%;border-collapse:collapse;margin-top:16px}td,th{border:1px solid #e2e8f0;padding:8px;text-align:left}
       .p1{background:#fef2f2}.p2{background:#fffbeb}.p3{background:#ecfdf5}</style></head><body>
       <h1>${hospitalConfig.name} — Shift Report</h1>
-      <p>Shift: ${shiftLabel(shift)} · ${new Date().toLocaleString()}</p>
+      <p>Shift: ${shift === "ALL" ? "All shifts" : shiftLabel(shift)} · ${new Date().toLocaleString()}</p>
       <p>Total today: ${stats.totalToday} | P1: ${stats.p1} | P2: ${stats.p2} | P3: ${stats.p3} | Avg response: ${stats.avgResponse}</p>
       <table><thead><tr><th>Patient</th><th>Priority</th><th>Condition</th><th>Ward</th><th>Time</th></tr></thead><tbody>
       ${filtered
@@ -203,7 +204,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-light dark:bg-surface-dark">
+    <div className="min-h-screen bg-surface-light text-text-primary dark:bg-surface-dark">
       <header className="sticky top-0 z-40 border-b border-border bg-surface-card/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-8">
           <Link href="/" className="flex items-center gap-3 transition hover:opacity-90" aria-label="Back to RuralCare home">
@@ -228,6 +229,15 @@ export default function DashboardPage() {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-text-primary md:text-3xl">Live Triage Dashboard</h1>
           <div className="flex gap-2 rounded-lg border border-border bg-surface-card p-1">
+            <button
+              type="button"
+              onClick={() => setShift("ALL")}
+              className={`rounded-md px-3 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:px-4 ${
+                shift === "ALL" ? "bg-brand text-white" : "text-text-secondary hover:bg-surface-muted"
+              }`}
+            >
+              All
+            </button>
             {(["morning", "evening", "night"] as Shift[]).map((s) => (
               <button
                 key={s}

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
+import { ThemeToggle } from "@/components/SystemStatus";
 
 const APP_URL = "https://rural-care-swart.vercel.app";
 
@@ -29,10 +30,10 @@ export default function QrPage() {
 
   return (
     <div className="min-h-screen bg-deep">
-      <AppHeader />
+      <AppHeader right={<ThemeToggle translationLang="english" />} />
       <main className="mx-auto flex max-w-md flex-col items-center px-4 pb-10 pt-[calc(64px+32px)] text-center">
         <h1 className="hero-title mb-2">QR Access</h1>
-        <p className="mb-8 text-sm text-white/55">
+        <p className="mb-8 text-sm hero-subtitle">
           Scan to access RuralCare Emergency Triage. Print and post at clinics for quick patient access.
         </p>
 
@@ -40,7 +41,7 @@ export default function QrPage() {
           <QRCodeCanvas value={appUrl} size={220} level="M" includeMargin />
         </div>
 
-        <p className="mt-4 break-all text-xs text-white/40">{appUrl}</p>
+        <p className="mt-4 break-all text-xs text-theme-subtle">{appUrl}</p>
 
         <button
           type="button"

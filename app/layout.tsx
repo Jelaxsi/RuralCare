@@ -40,12 +40,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icon.svg" />
         <meta name="mobile-web-app-capable" content="yes" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('ruralcare-theme');document.documentElement.classList.toggle('dark',t!=='light');}catch(e){document.documentElement.classList.add('dark');}})();`,
+          }}
+        />
       </head>
-      <body className={`${inter.variable} font-sans text-base bg-deep text-white`}>
+      <body className={`${inter.variable} font-sans text-base bg-deep`}>
         <ThemeProvider>
           <OfflineBanner message="You are offline. Some features may not work." />
           <ServiceWorkerRegister />

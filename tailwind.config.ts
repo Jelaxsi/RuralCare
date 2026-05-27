@@ -13,6 +13,7 @@ const config: Config = {
       colors: {
         deep: "#050A14",
         primary: "#6C63FF",
+        brand: "#6C63FF",
         "accent-cyan": "#00D4FF",
         success: "#00E5A0",
         warning: "#FFB800",
@@ -22,6 +23,21 @@ const config: Config = {
         "p3-emerald": "#00E5A0",
         "p2-amber": "#FFB800",
         "p1-rose": "#FF4560",
+        surface: {
+          light: "#f8fafc",
+          dark: "#050a14",
+          card: "#ffffff",
+          muted: "#f1f5f9",
+        },
+        text: {
+          primary: "#0f172a",
+          secondary: "#475569",
+          muted: "#64748b",
+        },
+        border: {
+          DEFAULT: "#e2e8f0",
+          dark: "rgba(255,255,255,0.1)",
+        },
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],

@@ -190,6 +190,19 @@ export function TriageResults({
 
   return (
     <div ref={printRef} className="space-y-3 page-fade-in">
+      {!isStreaming && (
+        <div className={`results-back-bar ${result.priority === "P1" ? "border-red-500/40" : ""}`}>
+          <button type="button" onClick={onNewAssessment} className="results-back-btn">
+            {t.backToAssessment}
+          </button>
+          {result.priority === "P1" && (
+            <span className="text-xs font-bold uppercase tracking-wide text-red-400">
+              {t.callEmergencyNow}
+            </span>
+          )}
+        </div>
+      )}
+
       {result.priority === "P1" && (
         <StaggerCard index={cardIndex++}>
           <EmergencyContacts t={t} />
@@ -204,7 +217,7 @@ export function TriageResults({
           } ${isStreaming ? "animate-pulse" : ""}`}
         >
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <p className="text-xs font-semibold uppercase tracking-widest text-white/40">
+            <p className="text-xs font-semibold uppercase tracking-widest text-theme-subtle">
               {t.assignedPriority}
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -232,10 +245,10 @@ export function TriageResults({
           <p className={`break-words text-[clamp(48px,14vw,72px)] font-black leading-none ${PRIORITY_TEXT[result.priority]}`}>
             {result.priority}
           </p>
-          <p className="mt-1 break-words text-xl text-white/80">{result.likely_condition}</p>
-          <p className="mt-2 break-words text-sm italic text-white/50">{result.reason}</p>
-          <p className="mt-3 text-xs text-white/30">{assessedLabel}</p>
-          <p className="mt-1 text-xs text-white/25">
+          <p className="mt-1 break-words text-xl text-theme-body">{result.likely_condition}</p>
+          <p className="mt-2 break-words text-sm italic text-theme-muted">{result.reason}</p>
+          <p className="mt-3 text-xs text-theme-subtle">{assessedLabel}</p>
+          <p className="mt-1 text-xs text-theme-subtle">
             {t.patientIdLabel}: {patientId}
           </p>
 
@@ -269,12 +282,12 @@ export function TriageResults({
 
       <StaggerCard index={cardIndex++}>
         <section className="result-card-premium">
-          <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/70">
+          <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-theme-muted">
             <MedicalCrossIcon className="h-4 w-4 text-violet-400" />
             {t.clinicalSummary}
           </h3>
-          <p className="mb-2 text-xs uppercase tracking-wider text-white/40">{t.whatsHappening}</p>
-          <p className="break-words text-sm leading-relaxed text-white/60">
+          <p className="mb-2 text-xs uppercase tracking-wider text-theme-subtle">{t.whatsHappening}</p>
+          <p className="break-words text-sm leading-relaxed text-theme-muted">
             {placeholder(result.what_is_happening) && isStreaming ? "…" : result.what_is_happening}
           </p>
           {result.specialist_needed && (
@@ -368,11 +381,22 @@ export function TriageResults({
         <DisclaimerBanner text={t.disclaimerResult} size="sm" />
       </div>
 
-      <div className="no-print mx-4 mt-4 pb-4">
+      <div className="no-print mx-4 mt-4 space-y-3 pb-4">
+        {result.priority === "P1" && (
+          <button
+            type="button"
+            onClick={onNewAssessment}
+            className="btn-touch w-full rounded-xl border py-3 font-semibold text-theme-body transition"
+            style={{ borderColor: "var(--border-default)", background: "var(--surface-muted)" }}
+          >
+            {t.backToAssessment}
+          </button>
+        )}
         <button
           type="button"
           onClick={onNewAssessment}
-          className="btn-touch w-full rounded-xl border border-white/10 bg-white/5 py-3 font-medium text-white/80 transition hover:bg-white/10"
+          className="btn-touch w-full rounded-xl border py-3 font-medium text-theme-muted transition hover:opacity-90"
+          style={{ borderColor: "var(--border-default)", background: "var(--card-bg)" }}
         >
           {t.startNewAssessment}
         </button>

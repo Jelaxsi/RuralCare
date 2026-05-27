@@ -112,6 +112,7 @@ export type TranslationKeys = {
   tryAgain: string;
   errorGeneric: string;
   startNewAssessment: string;
+  backToAssessment: string;
   assessedAt: string;
   loadingAnalyzing: string;
   loadingPriority: string;
@@ -245,6 +246,7 @@ const en: TranslationKeys = {
   tryAgain: "Try Again",
   errorGeneric: "Something went wrong. Please check your connection and try again.",
   startNewAssessment: "← Start New Assessment",
+  backToAssessment: "← Back to assessment",
   assessedAt: "Assessed at",
   loadingAnalyzing: "Analyzing symptoms…",
   loadingPriority: "Assessing priority…",
@@ -385,6 +387,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     shareAssessmentLabel: "ඇගයීම",
     shareTimeLabel: "වේලාව",
     startNewAssessment: "← නව ත්‍රාසනයක්",
+    backToAssessment: "← ත්‍රාසනයට ආපසු",
     assessedAt: "ඇගයීම කළ වේලාව",
   },
 
@@ -498,6 +501,7 @@ export const translations: Record<TranslationLanguage, TranslationKeys> = {
     loadingPriority: "முன்னுரிமையை மதிப்பிடுகிறோம்...",
     loadingResults: "முடிவுகளை தயார் செய்கிறோம்...",
     startNewAssessment: "← புதிய மதிப்பீட்டை தொடங்கு",
+    backToAssessment: "← மதிப்பீட்டுக்கு திரும்பு",
     assessedAt: "மதிப்பீடு நேரம்",
     callEmergencyNow: "அவசர அழைப்பு செய்யுங்கள்",
     call1990SuwaSeriya: "1990 அழைக்கவும் — Suwa Seriya",

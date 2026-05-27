@@ -8,7 +8,7 @@ import { ErrorCard } from "@/components/ErrorCard";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { MicSoundWave } from "@/components/SoundWaveVisualizer";
-import { SystemStatus } from "@/components/SystemStatus";
+import { SystemStatus, ThemeToggle } from "@/components/SystemStatus";
 import { TriageResults } from "@/components/TriageResults";
 import {
   getLanguageOption,
@@ -782,8 +782,11 @@ export default function TriagePage() {
       <AppHeader
         subtitle={t.brandSubtitle}
         dashboardLabel={t.dashboard}
+        backLabel={showResults ? t.backToAssessment : undefined}
+        onBack={showResults ? newTriage : undefined}
         right={
           <>
+            <ThemeToggle translationLang={languageOption.translationKey} />
             <LanguageSelector value={language} onChange={setLanguage} />
             <SystemStatus translationLang={languageOption.translationKey} />
           </>
@@ -802,7 +805,7 @@ export default function TriagePage() {
           <>
             <section className="hero-section">
               <h1 className="hero-title">{t.title}</h1>
-              <p className="mx-auto max-w-md text-base text-white/50">{t.subtitle}</p>
+              <p className="mx-auto max-w-md text-base hero-subtitle">{t.subtitle}</p>
             </section>
 
             <div className="mx-4 mb-6">

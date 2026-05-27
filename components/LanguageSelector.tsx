@@ -42,7 +42,12 @@ export function LanguageSelector({
         aria-haspopup="listbox"
         aria-label={`${t.preferredLanguage}: ${selected.label}`}
         onClick={() => setOpen((o) => !o)}
-        className="flex min-w-[200px] items-center justify-between gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2.5 text-base text-white backdrop-blur-md transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="flex min-w-[200px] items-center justify-between gap-2 rounded-full border px-4 py-2.5 text-base backdrop-blur-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        style={{
+          borderColor: "var(--input-border)",
+          background: "var(--card-bg)",
+          color: "var(--text-body)",
+        }}
       >
         <span className="flex items-center gap-2">
           <span aria-hidden>{selected.flag}</span>

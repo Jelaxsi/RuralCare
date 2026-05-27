@@ -18,7 +18,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const stored = localStorage.getItem("ruralcare-theme") as Theme | null;
-    const initial = stored === "dark" || stored === "light" ? stored : "light";
+    const initial = stored === "dark" || stored === "light" ? stored : "dark";
     setThemeState(initial);
     document.documentElement.classList.toggle("dark", initial === "dark");
     setMounted(true);

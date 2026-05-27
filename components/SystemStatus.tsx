@@ -54,7 +54,11 @@ export function SystemStatus({ translationLang }: { translationLang: Translation
 
   return (
     <div
-      className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 backdrop-blur-sm"
+      className="flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-sm"
+      style={{
+        borderColor: "var(--input-border)",
+        background: "var(--card-bg)",
+      }}
       role="status"
       aria-live="polite"
       aria-label={`System status: ${label}`}
@@ -68,7 +72,7 @@ export function SystemStatus({ translationLang }: { translationLang: Translation
         )}
         <span className={`relative inline-flex h-2 w-2 rounded-full ${dotClass}`} />
       </span>
-      <span className="text-xs font-medium text-white/70">{label}</span>
+      <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{label}</span>
     </div>
   );
 }
@@ -79,7 +83,7 @@ export function ThemeToggle({
   translationLang: TranslationLanguage;
 }) {
   const t = getTranslations(translationLang);
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(true);
 
   useEffect(() => {
     setDark(document.documentElement.classList.contains("dark"));
@@ -97,7 +101,8 @@ export function ThemeToggle({
       type="button"
       onClick={toggle}
       aria-label={dark ? t.lightMode : t.darkMode}
-      className="rounded-full border border-white/10 bg-white/[0.05] p-2 text-white/60 transition hover:border-white/20 hover:text-white"
+      title={dark ? t.lightMode : t.darkMode}
+      className="theme-toggle-btn"
     >
       {dark ? <SunIcon /> : <MoonIcon />}
     </button>
