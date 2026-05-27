@@ -1,9 +1,11 @@
 import type { Priority, TriageResult } from "../types";
 
 export function buildSpokenSummary(result: TriageResult): string {
-  return result.reason?.trim()
-    ? result.reason.trim().substring(0, 100)
-    : "Assessment complete";
+  const spokenText =
+    result.reason?.trim() ||
+    result.what_is_happening?.trim() ||
+    "Assessment complete. Please see results.";
+  return spokenText.substring(0, 100);
 }
 
 export function speechRateForPriority(priority: Priority): number {
@@ -19,20 +21,6 @@ function browserSpeak(text: string, lang: string): void {
   window.speechSynthesis.speak(u);
 }
 
-/** Fire-and-forget warm-up so the TTS route is hot before triage finishes. */
-export function prewarmTts(speechCode = "en-US"): void {
-  if (typeof window === "undefined") return;
-
-  fetch("/api/tts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text: " ",
-      language: speechCode.split("-")[0],
-    }),
-  }).catch(() => {});
-}
-
 export async function playSpokenSummary(params: {
   text: string;
   speechCode: string;
@@ -42,8 +30,19 @@ export async function playSpokenSummary(params: {
 
   if (typeof window === "undefined") return;
 
-  // Keep TTS input short for faster audio generation
-  const spokenText = text.substring(0, 100);
+  const spokenText = (
+    text?.trim() || "Assessment complete. Please see results."
+  ).substring(0, 100);
+
+  if (spokenText.trim().length < 2) {
+    console.log("[TTS] Skipping — text too short");
+    return;
+  }
+
+  console.log("[TTS] About to speak:", {
+    text: spokenText.substring(0, 50),
+    speechCode,
+  });
 
   try {
     const res = await fetch("/api/tts", {
@@ -55,16 +54,17 @@ export async function playSpokenSummary(params: {
       }),
     });
 
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => "");
-      console.error("[TTS] API error:", res.status, errBody);
+    if (res.status === 204 || !res.ok) {
+      console.log("[TTS] No audio returned, skipping");
       if (res.status === 503) {
         throw new Error("OPENAI_API_KEY missing — save .env.local and restart npm run dev");
       }
-      throw new Error(`TTS API failed (${res.status})`);
+      return;
     }
 
     const blob = await res.blob();
+    if (blob.size === 0) return;
+
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
 

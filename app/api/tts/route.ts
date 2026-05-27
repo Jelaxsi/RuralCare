@@ -2,36 +2,31 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
 export async function POST(req: Request) {
-  let text = "";
-  let language = "en";
-
   try {
     const body = (await req.json()) as { text?: string; language?: string };
-    text = body.text ?? "";
-    language = body.language ?? "en";
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+    const { text, language = "en" } = body;
 
-  if (!text.trim()) {
-    return NextResponse.json({ error: "No text provided" }, { status: 400 });
-  }
+    console.log("[TTS] Request received:", {
+      text: text?.substring(0, 50),
+      language,
+    });
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "TTS not configured" }, { status: 503 });
-  }
+    if (!text || text.trim().length < 2) {
+      console.log("[TTS] Skipping — text too short");
+      return new Response(null, { status: 204 });
+    }
 
-  const lang = language.toLowerCase();
-  const slowSpeech = ["tamil", "sinhala", "ta", "si"].includes(lang);
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "TTS not configured" }, { status: 503 });
+    }
 
-  try {
     const openai = new OpenAI({ apiKey });
     const response = await openai.audio.speech.create({
       model: "tts-1",
       voice: "nova",
-      input: text,
-      speed: slowSpeech ? 0.9 : 1.0,
+      input: text.trim().substring(0, 300),
+      speed: 1.0,
     });
 
     const audioBuffer = await response.arrayBuffer();
@@ -43,7 +38,10 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
-    console.error("[OpenAI TTS] Error:", error);
-    return NextResponse.json({ error: "TTS failed" }, { status: 500 });
+    console.error("[TTS] Error:", error);
+    return NextResponse.json(
+      { error: "TTS failed", details: String(error) },
+      { status: 500 },
+    );
   }
 }

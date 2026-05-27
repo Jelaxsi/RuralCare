@@ -21,7 +21,7 @@ import {
 import { getTranslations } from "@/lib/i18n/translations";
 import { emptyStreamingResult } from "@/lib/triage/stream-parse";
 import { streamTriageAnalysis } from "@/lib/triage/stream-client";
-import { playSpokenSummary, prewarmTts, speechRateForPriority } from "@/lib/tts/speech";
+import { playSpokenSummary, speechRateForPriority } from "@/lib/tts/speech";
 import type { TriageResult } from "@/lib/types";
 
 async function resolveAddress(lat: number, lng: number): Promise<string | null> {
@@ -501,7 +501,6 @@ export default function TriagePage() {
 
     intentionalStopRef.current = false;
     prevLanguageRef.current = language;
-    prewarmTts(getSpeechCode(language));
 
     const apiKey = process.env.NEXT_PUBLIC_VALSEA_API_KEY?.trim();
     if (apiKey) {
